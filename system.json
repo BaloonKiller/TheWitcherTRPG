@@ -280,6 +280,6 @@
   "primaryTokenAttribute": "resources.health",
   "secondaryTokenAttribute": "resources.power",
   "url": "https://github.com/BaloonKiller/TheWitcherTRPG",
-  "manifest": "https://github.com/BaloonKiller/TheWitcherTRPG/releases/latest/download/system.json",
-  "download": "DOWNLOAD"
+  "manifest": "https://raw.githubusercontent.com/BaloonKiller/TheWitcherTRPG/main/system.json",
+  "download": "https://github.com/BaloonKiller/TheWitcherTRPG/archive/refs/heads/main.zip"
 }
