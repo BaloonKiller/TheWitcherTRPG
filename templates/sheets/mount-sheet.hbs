@@ -1,35 +1,197 @@
-<form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
-    {{!-- Sheet Tab Navigation --}}
+<form class="{{cssClass}} transport-sheet" autocomplete="off">
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
+
     <nav class="sheet-tabs tabs" data-group="primary">
-        <a class="item" data-tab="description">{{localize "WITCHER.Item.Description"}}</a>
-        <a class="item" data-tab="attributes">{{localize "WITCHER.Item.Attribute"}}</a>
+        <a class="item {{tabs.description.cssClass}}" data-action="tab" data-group="primary" data-tab="description">{{localize "WITCHER.Item.Description"}}</a>
+        <a class="item {{tabs.attributes.cssClass}}" data-action="tab" data-group="primary" data-tab="attributes">{{localize "WITCHER.Item.Attribute"}}</a>
+        <a class="item {{tabs.loadout.cssClass}}" data-action="tab" data-group="primary" data-tab="loadout">{{localize "WITCHER.Transport.Loadout"}}</a>
     </nav>
 
-    {{!-- Sheet Body --}}
     <section class="sheet-body">
-
-        {{!-- Description Tab --}}
-        <div class="tab" data-group="primary" data-tab="description">
+        <div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
             <textarea name="system.description">{{item.system.description}}</textarea>
         </div>
 
-        {{!-- Attributes Tab --}}
-        <div class="tab attributes" data-group="primary" data-tab="attributes">
-            <table>
-                <tr>
-                    <th>{{localize "WITCHER.Mount.Dex"}}</th>
-                    <th>{{localize "WITCHER.Mount.ControlMod"}}</th>
-                    <th>{{localize "WITCHER.Mount.Speed"}}</th>
-                    <th>{{localize "WITCHER.Mount.Hp"}}</th>
-                </tr>
-                <tr>
-                    <td><input type="text" name="system.dex" value="{{item.system.dex}}"/></td>
-                    <td><input type="text" name="system.control" value="{{item.system.control}}"/></td>
-                    <td><input type="text" name="system.speed" value="{{item.system.speed}}"/></td>
-                    <td><input type="text" name="system.hp" value="{{item.system.hp}}" data-dtype="Number"/></td>
-                </tr>
-            </table>
+        <div class="tab attributes {{tabs.attributes.cssClass}}" data-group="primary" data-tab="attributes">
+            <div class="transport-actions">
+                {{#if transport.isOwned}}
+                <button type="button" class="transport-control" title="{{localize 'WITCHER.Transport.ControlCheck'}}">
+                    <i class="fas fa-dharmachakra" aria-hidden="true"></i>
+                    <span>{{localize "WITCHER.Transport.ControlCheck"}}</span>
+                </button>
+                {{#if transport.isMount}}
+                <button type="button" class="transport-athletics" title="{{localize 'WITCHER.Transport.AthleticsCheck'}}">
+                    <i class="fas fa-horse" aria-hidden="true"></i>
+                    <span>{{localize "WITCHER.Transport.AthleticsCheck"}}</span>
+                </button>
+                {{/if}}
+                <button type="button" class="transport-damage" title="{{localize 'WITCHER.Transport.ApplyDamage'}}">
+                    <i class="fas fa-heart-broken" aria-hidden="true"></i>
+                    <span>{{localize "WITCHER.Transport.Damage"}}</span>
+                </button>
+                {{#if transport.canRepair}}
+                <button type="button" class="transport-repair" title="{{localize 'WITCHER.Transport.Repair'}}">
+                    <i class="fas fa-tools" aria-hidden="true"></i>
+                    <span>{{localize "WITCHER.Transport.Repair"}}</span>
+                </button>
+                {{/if}}
+                {{/if}}
+            </div>
+
+            <div class="transport-fields">
+                <label>
+                    <span>{{localize "WITCHER.Transport.KindLabel"}}</span>
+                    <select name="system.kind">
+                        {{#select transport.kind}}
+                        <option value="mount">{{localize "WITCHER.Transport.Kind.mount"}}</option>
+                        <option value="wagon">{{localize "WITCHER.Transport.Kind.wagon"}}</option>
+                        <option value="landVehicle">{{localize "WITCHER.Transport.Kind.landVehicle"}}</option>
+                        <option value="waterVehicle">{{localize "WITCHER.Transport.Kind.waterVehicle"}}</option>
+                        {{/select}}
+                    </select>
+                </label>
+                <label>
+                    <span>{{localize "WITCHER.Transport.ControlSkill"}}</span>
+                    <select name="system.controlSkill">
+                        {{#select transport.controlSkill}}
+                        <option value="riding">{{localize "WITCHER.SkRefRiding"}}</option>
+                        <option value="sailing">{{localize "WITCHER.SkRefSailing"}}</option>
+                        {{/select}}
+                    </select>
+                </label>
+                {{#if transport.isMount}}
+                <label title="{{localize 'WITCHER.Transport.AthleticsTotalHint'}}">
+                    <span>{{localize "WITCHER.Transport.AthleticsTotal"}}</span>
+                    <input type="text" name="system.dex" value="{{item.system.dex}}">
+                </label>
+                {{/if}}
+                <label>
+                    <span>{{localize "WITCHER.Mount.ControlMod"}}</span>
+                    <input type="number" name="system.control" value="{{transport.baseControl}}" step="1">
+                </label>
+                <label title="{{localize 'WITCHER.Transport.SpeedHint'}}">
+                    <span>{{localize "WITCHER.Mount.Speed"}}</span>
+                    <input type="text" name="system.speed" value="{{item.system.speed}}">
+                </label>
+                <label>
+                    <span>{{localize "WITCHER.Transport.CurrentHp"}}</span>
+                    <input type="number" name="system.hpCurrent" value="{{transport.hp.value}}" min="0" step="1">
+                </label>
+                <label>
+                    <span>{{localize "WITCHER.Transport.MaxHp"}}</span>
+                    <input type="number" name="system.hp" value="{{item.system.hp}}" min="0" step="1">
+                </label>
+                <label>
+                    <span>{{localize "WITCHER.Transport.Sp"}}</span>
+                    <input type="number" name="system.sp" value="{{item.system.sp}}" min="0" step="1">
+                </label>
+                {{#if transport.isWagon}}
+                <label title="{{localize 'WITCHER.Transport.OccupancyHint'}}">
+                    <span>{{localize "WITCHER.Transport.Occupancy"}}</span>
+                    <input type="number" name="system.occupancy" value="{{item.system.occupancy}}" min="0" step="1">
+                </label>
+                <label>
+                    <span>{{localize "WITCHER.Transport.ImprovementSlots"}}</span>
+                    <input type="number" name="system.improvementSlots" value="{{item.system.improvementSlots}}" min="0" step="1">
+                </label>
+                {{/if}}
+                {{#if transport.usesPullingAnimal}}
+                <label title="{{localize 'WITCHER.Transport.PullerHint'}}">
+                    <span>{{localize "WITCHER.Transport.Puller"}}</span>
+                    <select name="system.pullerId">
+                        {{#select transport.pullerId}}
+                        <option value="">{{localize "WITCHER.Transport.NoPuller"}}</option>
+                        {{#each transport.pullingAnimals as |puller|}}
+                        <option value="{{puller.id}}">{{puller.name}} ({{localize "WITCHER.Mount.Speed"}} {{puller.speed}})</option>
+                        {{/each}}
+                        {{/select}}
+                    </select>
+                </label>
+                {{/if}}
+                {{#unless transport.isMount}}
+                <label>
+                    <span title="{{localize 'WITCHER.Transport.CargoCapacityHint'}}">{{localize "WITCHER.Transport.CargoCapacity"}}</span>
+                    <input type="number" name="system.cargoCapacity" value="{{item.system.cargoCapacity}}" min="0" step="0.1" placeholder="{{localize 'WITCHER.Transport.CapacityUnspecified'}}">
+                </label>
+                {{/unless}}
+            </div>
+
+            <dl class="transport-derived-summary">
+                <div><dt>{{localize "WITCHER.Mount.Control"}}</dt><dd>{{transport.control}}</dd></div>
+                <div><dt>{{localize "WITCHER.Mount.Speed"}}</dt><dd>{{transport.speed}}</dd></div>
+                <div><dt>{{localize "WITCHER.Mount.Hp"}}</dt><dd>{{transport.hp.value}} / {{transport.hp.max}}</dd></div>
+                <div><dt>{{localize "WITCHER.Transport.Sp"}}</dt><dd>{{transport.sp}}</dd></div>
+                {{#if transport.isWagon}}
+                <div><dt>{{localize "WITCHER.Transport.ImprovementSlots"}}</dt><dd>{{transport.improvementSlots.used}} / {{transport.improvementSlots.max}}</dd></div>
+                {{/if}}
+                <div title="{{#unless transport.hasCargoCapacity}}{{localize 'WITCHER.Transport.CapacityUnspecifiedHint'}}{{/unless}}">
+                    <dt>{{localize "WITCHER.Transport.CargoCapacity"}}</dt>
+                    <dd>{{#if transport.hasCargoCapacity}}{{transport.cargoCapacity}} kg{{else}}{{localize "WITCHER.Transport.CapacityUnspecified"}}{{/if}}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="tab transport-loadout {{tabs.loadout.cssClass}}" data-group="primary" data-tab="loadout">
+            <section class="transport-loadout-section">
+                <h3>{{localize "WITCHER.Transport.Equipment"}}</h3>
+                <div class="transport-contained-list">
+                    {{#each transport.accessories as |storedItem|}}
+                    <div class="transport-contained-item">
+                        <img src="{{storedItem.img}}" alt="">
+                        <button type="button" class="transport-contained-edit" data-uuid="{{storedItem.uuid}}">{{storedItem.name}}</button>
+                        <span>{{localize (concat "WITCHER.Transport.Slot." storedItem.profile.slot)}}</span>
+                        <a class="transport-remove-item" data-collection="accessories" data-uuid="{{storedItem.uuid}}" title="{{localize 'WITCHER.Transport.Detach'}}">
+                            <i class="fas fa-unlink" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                    {{/each}}
+                </div>
+            </section>
+
+            <section class="transport-loadout-section">
+                <h3>
+                    <span>{{localize "WITCHER.Transport.Cargo"}}</span>
+                    <span title="{{#unless transport.hasCargoCapacity}}{{localize 'WITCHER.Transport.CapacityUnspecifiedHint'}}{{/unless}}">
+                        {{transport.cargoWeight}} / {{#if transport.hasCargoCapacity}}{{transport.cargoCapacity}}{{else}}&mdash;{{/if}} kg
+                    </span>
+                </h3>
+                {{#if transport.cargoBlocked}}
+                <div class="transport-cargo-blocked">
+                    <i class="fas fa-lock" aria-hidden="true"></i>
+                    <span>{{localize "WITCHER.Transport.CargoRequiresStorage"}}</span>
+                    {{#if transport.cargoOverloaded}}
+                    <button type="button" class="transport-unload-all">{{localize "WITCHER.Transport.UnloadAll"}}</button>
+                    {{/if}}
+                </div>
+                {{/if}}
+                <div class="transport-contained-list">
+                    {{#each transport.cargo as |storedItem|}}
+                    <div class="transport-contained-item">
+                        <img src="{{storedItem.img}}" alt="">
+                        <button type="button" class="transport-contained-edit" data-uuid="{{storedItem.uuid}}">{{storedItem.name}}</button>
+                        <span class="transport-stack-weight">
+                            {{#if storedItem.isContainer}}
+                            <strong title="{{localize 'WITCHER.Container.TotalWeight'}}">{{storedItem.totalWeight}} kg</strong>
+                            {{else if storedItem.isStacked}}
+                            {{storedItem.quantity}} &times; {{storedItem.weight}} kg = <strong>{{storedItem.totalWeight}} kg</strong>
+                            {{else}}
+                            {{storedItem.weight}} kg
+                            {{/if}}
+                        </span>
+                        <span class="transport-contained-actions">
+                            {{#if storedItem.isContainer}}
+                            <a class="transport-container-open" data-uuid="{{storedItem.uuid}}" title="{{localize 'WITCHER.Container.OpenContents'}}">
+                                <i class="fas fa-box-open" aria-hidden="true"></i>
+                            </a>
+                            {{/if}}
+                            <a class="transport-remove-item" data-collection="cargo" data-uuid="{{storedItem.uuid}}" title="{{localize 'WITCHER.Transport.Unload'}}">
+                                <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                            </a>
+                        </span>
+                    </div>
+                    {{/each}}
+                </div>
+            </section>
         </div>
     </section>
 </form>

@@ -25,6 +25,12 @@
   flex: none;
 }
 
+.monster-sheet-left-column h1 {
+  margin: 0 0 8px;
+  font-size: 2em;
+  line-height: normal;
+}
+
 .monster-left-sidebar {
   flex-basis: 180px;
   flex: none;
@@ -170,6 +176,7 @@
 }
 
 .monster-img {
+  display: block;
   width: 375px;
   height: 545px;
 }
@@ -185,7 +192,8 @@
 
 .monster-info {
   position: absolute;
-  top: 410px;
+  top: auto;
+  bottom: 10px;
   left: 10px;
   width: 250px;
   background-color: silver;
@@ -196,6 +204,9 @@
 
 .monster-info input {
   height: 18px;
+  min-height: 18px;
+  line-height: 16px;
+  padding-block: 0;
   font-weight: bold;
 }
 
@@ -203,6 +214,7 @@
   margin-top: 10px;
   flex-basis: 380px;
   flex-grow: 1;
+  min-width: 0;
 }
 
 .monster-knowledge label,
@@ -231,20 +243,37 @@
 }
 
 .monster-right-attributes .right-element {
+  position: relative;
+  flex: 0 0 45px;
   height: 45px;
   width: 45px;
   margin: 0 0 5px 5px;
+  text-align: center;
 }
 
 .monster-right-attributes .right-image {
-  height: 100%;
+  display: block;
+  width: 45px;
+  height: 45px;
+  margin: 0;
+  border: 0;
 }
 
 .monster-right-attributes .right-value {
+  position: absolute;
+  inset: 0;
+  transform: translateY(2px);
+  width: 45px;
+  height: 45px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #000;
   font-size: 15px;
-  bottom: 40px;
-  position: relative;
-  left: 20px;
+  line-height: 45px;
+  text-align: center;
+  box-shadow: none;
 }
 
 .monster-right-attributes .death-section {
@@ -254,6 +283,8 @@
 .monster-right-top {
   padding: 10px;
   flex-basis: 270px;
+  min-width: 480px;
+  box-sizing: border-box;
   background-color: lightslategrey;
   border-radius: 10px;
   color: black;
@@ -264,6 +295,12 @@
 .monster-right-row {
   display: flex;
   justify-content: flex-start;
+}
+
+.witcher.sheet.actor.monster .spell h3 {
+  margin: 0.45em 0 0.3em;
+  font-size: 1.3em;
+  line-height: 1.2;
 }
 
 .monster-crit-wounds-section {
@@ -306,8 +343,18 @@
   box-shadow: 0 0 10px #9ecaed;
 }
 
-.monster-knowledge .editor-content {
+.monster-knowledge .editor {
   height: 100px;
+  min-height: 0;
+  max-height: 100px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.monster-knowledge .editor-content {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .modifier-flex {

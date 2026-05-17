@@ -1,0 +1,279 @@
+.transport-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.transport-table th,
+.transport-table td {
+    padding: 4px;
+    vertical-align: middle;
+}
+
+.transport-info-column {
+    width: 28px;
+}
+
+.transport-kind-column {
+    width: 78px;
+}
+
+.transport-control-column {
+    width: 56px;
+}
+
+.transport-speed-column {
+    width: 50px;
+}
+
+.transport-hp-column {
+    width: 74px;
+}
+
+.transport-actions-column {
+    width: 92px;
+}
+
+.transport-table .item-img {
+    display: block;
+    height: 28px;
+    min-height: 28px;
+    min-width: 28px;
+    object-fit: cover;
+    width: 28px;
+}
+
+.transport-name-cell {
+    align-items: center;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    min-width: 0;
+}
+
+.transport-name-cell input {
+    min-width: 0;
+    width: 100%;
+}
+
+.transport-hp-cell {
+    align-items: center;
+    display: flex;
+    gap: 3px;
+}
+
+.transport-hp-cell input {
+    min-width: 34px;
+    width: 50%;
+}
+
+.transport-row-actions {
+    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, 20px);
+    justify-content: end;
+    min-height: 24px;
+}
+
+.transport-row-actions a,
+.transport-item-controls a {
+    align-items: center;
+    display: inline-flex;
+    height: 20px;
+    justify-content: center;
+    width: 20px;
+}
+
+.transport-detail-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+}
+
+.transport-item-controls {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.transport-sheet .sheet-body,
+.transport-sheet .tab {
+    height: calc(100% - 36px);
+}
+
+.transport-sheet .tab[data-tab="description"] textarea {
+    height: 100%;
+    resize: none;
+    width: 100%;
+}
+
+.transport-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.transport-actions button {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 1 auto;
+    gap: 6px;
+    min-height: 28px;
+    width: auto;
+}
+
+.transport-fields,
+.transport-accessory-fields {
+    display: grid;
+    gap: 8px 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.transport-fields label,
+.transport-accessory-fields label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.transport-fields input,
+.transport-fields select,
+.transport-accessory-fields input,
+.transport-accessory-fields select {
+    width: 100%;
+}
+
+.transport-derived-summary {
+    border-top: 1px solid var(--color-border-light-primary, #999);
+    display: grid;
+    gap: 6px 12px;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    margin: 12px 0 0;
+    padding-top: 8px;
+}
+
+.transport-derived-summary div {
+    min-width: 0;
+    text-align: center;
+}
+
+.transport-derived-summary dt {
+    font-weight: 700;
+}
+
+.transport-derived-summary dd {
+    margin: 2px 0 0;
+}
+
+.transport-loadout-section {
+    margin-top: 10px;
+}
+
+.transport-loadout-section h3 {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.transport-cargo-blocked {
+    align-items: center;
+    border: 1px solid var(--color-border-light-primary, #999);
+    display: flex;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 6px 8px;
+}
+
+.transport-contained-list {
+    border-top: 1px solid var(--color-border-light-primary, #999);
+}
+
+.transport-contained-item {
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-light-tertiary, #bbb);
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr) minmax(140px, auto) max-content;
+    min-height: 36px;
+    padding: 4px 0;
+}
+
+.transport-contained-item img {
+    height: 28px;
+    object-fit: cover;
+    width: 28px;
+}
+
+.transport-contained-item button {
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transport-contained-item a {
+    align-items: center;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+.transport-contained-actions {
+    align-items: center;
+    display: flex;
+    gap: 2px;
+    justify-content: flex-end;
+}
+
+.transport-stack-weight {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.transport-quantity-dialog label {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+}
+
+.transport-quantity-dialog input {
+    width: 80px;
+}
+
+.transport-accessory-fields {
+    border-top: 1px solid var(--color-border-light-primary, #999);
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+.transport-action-dialog {
+    display: grid;
+    gap: 8px;
+}
+
+.transport-action-dialog label {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.transport-action-dialog input[type="number"] {
+    width: 90px;
+}
+
+@media (max-width: 700px) {
+    .transport-fields,
+    .transport-accessory-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .transport-derived-summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}

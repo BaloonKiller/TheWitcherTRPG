@@ -15,10 +15,6 @@ export default class ArmorData extends CommonItemData {
         initial: 'Light',
         choices: ['Light', 'Medium', 'Heavy', 'Natural',]
       }),
-      location: new fields.ArrayField(new fields.StringField({
-        initial: 'Torso',
-        choices: ['Head', 'Torso', 'Leg', 'FullCover']
-      })),
 
       avail: new fields.StringField({ initial: '' }),
       equipped: new fields.BooleanField({ initial: false }),
@@ -59,7 +55,8 @@ export default class ArmorData extends CommonItemData {
     if (enhancementItemIds?.length > 0) {
       this.enhancementItems = []
 
-      let items = this.parent.actor.items;
+      let items = this.parent.actor?.items;
+      if (!items) return;
 
       enhancementItemIds.forEach(itemId => {
         let item = items.get(itemId);
@@ -77,17 +74,19 @@ export default class ArmorData extends CommonItemData {
 
   /** @inheritdoc */
   static migrateData(source) {
-    super.migrateData(source);
+    const migrated = super.migrateData(source) ?? source;
 
-    if ("enhancementItems" in source) {
-      source.enhancementItemIds = source.enhancementItemIds ?? []
-      source.enhancementItems.forEach(enhancement => {
-        if (Object.keys(enhancement).length !== 0) {
-          source.enhancementItemIds.push(enhancement._id)
+    if ("enhancementItems" in migrated) {
+      migrated.enhancementItemIds = migrated.enhancementItemIds ?? []
+      migrated.enhancementItems.forEach(enhancement => {
+        const id = enhancement.id ?? enhancement._id;
+        if (id && Object.keys(enhancement).length !== 0 && !migrated.enhancementItemIds.includes(id)) {
+          migrated.enhancementItemIds.push(id)
         }
       });
     }
 
-    this.effects?.forEach(effect => effect.percentage = parseInt(effect.percentage))
+    migrated.effects?.forEach(effect => effect.percentage = Number.parseInt(effect.percentage, 10) || 0)
+    return migrated;
   }
 }

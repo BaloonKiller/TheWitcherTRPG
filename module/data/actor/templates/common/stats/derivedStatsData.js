@@ -7,7 +7,7 @@ export default function derivedStats() {
         hp: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.HP")),
         shield: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Shield")),
         sta: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Sta")),
-        resolve: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Resolve")),
+        resolve: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Resolve", { min: 0 })),
         focus: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Focus")),
         vigor: new fields.SchemaField(derivedStat("WITCHER.Actor.DerStat.Vigor")),
         modifiersIsOpened: new fields.BooleanField({initial: false}),

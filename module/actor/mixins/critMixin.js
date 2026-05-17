@@ -13,8 +13,10 @@ export let critMixin = {
             mod: "None",
             description: WITCHER.CritDescription.SimpleCrackedJaw,
             notes: "",
+            daysHealed: 0,
+            healingTime: 0,
         });
-        this.actor.update({ "system.critWounds": newCritList });
+        await this.actor.update({ "system.critWounds": newCritList });
     },
 
     async _onCritRemove(event) {
@@ -22,8 +24,9 @@ export let critMixin = {
         const prevCritList = this.actor.system.critWounds;
         const newCritList = Object.values(prevCritList).map((details) => details);
         const idxToRm = newCritList.findIndex((v) => v.id === event.target.dataset.id);
+        if (idxToRm < 0) return;
         newCritList.splice(idxToRm, 1);
-        this.actor.update({ "system.critWounds": newCritList });
+        await this.actor.update({ "system.critWounds": newCritList });
     },
 
     critListener(html) {

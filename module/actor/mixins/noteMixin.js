@@ -1,19 +1,20 @@
 export let noteMixin = {
 
   async _onNoteAdd() {
-    let notes = this.actor.system.notes
+    let notes = foundry.utils.deepClone(this.actor.system.notes ?? [])
     notes.push({
       title: '',
       details: ''
     })
-    this.actor.update({ "system.notes": notes });
+    await this.actor.update({ "system.notes": notes });
   },
 
   async _onNoteDelete(event) {
     let noteIndex = event.currentTarget.dataset.noteIndex;
-    let notes = this.actor.system.notes
+    let notes = foundry.utils.deepClone(this.actor.system.notes ?? [])
+    if (noteIndex < 0 || noteIndex >= notes.length) return;
     notes.splice(noteIndex, 1)
-    this.actor.update({ "system.notes": notes });
+    await this.actor.update({ "system.notes": notes });
   },
 
   noteListener(html) {

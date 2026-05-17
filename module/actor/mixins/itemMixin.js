@@ -1,62 +1,105 @@
 import { buttonDialog, extendedRoll } from "../../scripts/chat.js";
 import { rollDamage } from "../../scripts/attack.js";
-import { addModifiers } from "../../scripts/witcher.js";
+import { addModifiers, sumItemProperty } from "../../scripts/witcher.js";
+import { addActorSkillEffectModifiers } from "../../scripts/actorSkillEffects.mjs";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import {
+  DragDrop,
+  ItemDocument,
+  WitcherDialog,
+  deepClone,
+  fromUuidSync,
+  renderDocumentSheet,
+  renderTemplate,
+  renderApplication,
+} from "../../setup/foundry-compat.js";
+import { depositCurrencyItem } from "../../scripts/currencyLedger.js";
+import {
+  getEffectiveSpellDefence,
+  getSpellDamageFormulaDisplay,
+  hasSpellDefenceRoll,
+} from "../../scripts/spellResolution.mjs";
+import { createSpellAreaResolution, renderSpellAreaResolution } from "../../scripts/spellArea.mjs";
+import { endResolvedSpellArea } from "../../scripts/spellAreaEffects.mjs";
+import {
+  applySpellShieldBuff,
+  canApplySpellShieldBuff,
+  getSpellShieldDefinition,
+} from "../../scripts/spellBuffs.mjs";
+import { findStackableInventoryItem, getItemDropSource } from "../../scripts/inventoryDrops.mjs";
+import { buildTransportDocumentUpdate } from "../../scripts/documentUpdates.mjs";
+import {
+  isContainerItem,
+  moveContainerBetweenActors,
+  prepareContainerItemSource,
+} from "../../scripts/containerStorage.mjs";
 
 export let itemMixin = {
 
-  async _onDropItem(event, data) {
+  async _onDropItem(event, item) {
     if (!this.actor.isOwner) return false;
-    const item = await Item.implementation.fromDropData(data);
+    if (!item) return false;
     const itemData = item.toObject();
+    const dropSource = getItemDropSource(item, this.actor);
 
     // Handle item sorting within the same Actor
-    if (this.actor.uuid === item.parent?.uuid) return this._onSortItem(event, itemData);
+    if (dropSource === "sameActor") return this._onSortItem(event, item);
 
     if (this._isUniqueItem(itemData)) {
       await this._removeItemsOfType(itemData.type)
     }
 
-    // dragData should exist for WitcherActorSheet, WitcherItemSheet.
-    // It is populated during the activateListeners phase
-    let witcherDragData = event.dataTransfer.getData("text/plain")
-    let dragData = witcherDragData ? JSON.parse(witcherDragData) : data;
+    // Compendium and world Items are templates, so copy them directly to the Actor.
+    // Their standard Foundry drag data does not need to be parsed a second time.
+    if (dropSource === "external") {
+      return this._addItem(this.actor, item, 1, false, { isTransfer: true });
+    }
 
-    // handle itemDrop prepared in WitcherActorSheet, WitcherItemSheet
-    // need this to drop item from actor
-    if (witcherDragData && dragData.type === "itemDrop") {
-      let previousActor = game.actors.get(dragData.actor._id)
-      let token = previousActor.token ?? previousActor.getActiveTokens()[0]
-      if (token) {
-        previousActor = token.actor
-      }
+    let previousActor = item.parent;
+    if (!previousActor || previousActor.documentName !== "Actor") {
+      return ui.notifications.error(game.i18n.localize("WITCHER.Items.InvalidSource"));
+    }
+    const token = previousActor.token ?? previousActor.getActiveTokens()[0];
+    if (token) previousActor = token.actor;
 
-      if (previousActor == this.actor) {
-        return;
-      }
+    const sourceItem = previousActor.items.get(item.id) ?? item;
+    if (isContainerItem(sourceItem)) {
+      return moveContainerBetweenActors(sourceItem, this.actor, fromUuidSync);
+    }
 
-      // Calculate the rollable amount of items to be dropped from actors' inventory
-      if (typeof (dragData.item.system.quantity) === 'string' && dragData.item.system.quantity.includes("d")) {
+    const dragData = { item: sourceItem };
+
+    // Calculate the rollable amount of items to be dropped from actors' inventory
+    if (typeof (dragData.item.system.quantity) === 'string' && dragData.item.system.quantity.includes("d")) {
         let messageData = {
           speaker: ChatMessage.getSpeaker({ actor: this.actor }),
           flavor: `<h1>Quantity of ${dragData.item.name}</h1>`,
         }
-        let roll = await new Roll(dragData.item.system.quantity).evaluate({ async: true })
-        roll.toMessage(messageData)
+        let roll = await new Roll(dragData.item.system.quantity).evaluate()
+        await roll.toMessage(messageData)
 
         // Add items to the recipient actor
-        this._addItem(this.actor, dragData.item, Math.floor(roll.total))
+        const rolledQuantity = Math.max(0, Math.floor(Number(roll.total)));
+        if (rolledQuantity > 0) {
+          const added = await this._addItem(this.actor, dragData.item, rolledQuantity, false, { isTransfer: true })
+          if (!added) return;
+        }
 
         // Remove items from donor actor
         if (previousActor) {
-          await previousActor.items.get(dragData.item._id).delete()
+          const sourceItem = previousActor.items.get(dragData.item.id ?? dragData.item._id);
+          if (sourceItem?.type === "diagrams" && sourceItem.system.learned) {
+            await sourceItem.update({ "system.quantity": 0 });
+          } else {
+            await sourceItem?.delete();
+          }
         }
-        return
-      }
+      return
+    }
 
-      if (dragData.item.system.quantity != 0) {
-        if (dragData.item.system.quantity > 1) {
-          let content = `${game.i18n.localize("WITCHER.Items.transferMany")}: <input type="number" class="small" name="numberOfItem" value=1>/${dragData.item.system.quantity} <br />`
+    if (dragData.item.system.quantity != 0) {
+      if (dragData.item.system.quantity > 1) {
+          let content = `${game.i18n.localize("WITCHER.Items.transferMany")}: <input type="number" class="small" name="numberOfItem" min="1" max="${dragData.item.system.quantity}" value="1">/${dragData.item.system.quantity} <br />`
           let cancel = true
           let numberOfItem = 0
           let dialogData = {
@@ -78,39 +121,24 @@ export let itemMixin = {
           if (cancel) {
             return
           } else {
-            // Remove items from donor actor
-            this._removeItem(previousActor, dragData.item._id, numberOfItem)
-            if (numberOfItem > dragData.item.system.quantity) {
-              numberOfItem = dragData.item.system.quantity
-            }
+            numberOfItem = getValidItemQuantity(numberOfItem, dragData.item.system.quantity)
+            if (!numberOfItem) return;
+
             // Add items to the recipient actor
-            this._addItem(this.actor, dragData.item, numberOfItem)
+            const added = await this._addItem(this.actor, dragData.item, numberOfItem, false, { isTransfer: true })
+            if (!added) return;
+            // Remove items from donor actor
+            await this._removeItem(previousActor, dragData.item.id ?? dragData.item._id, numberOfItem)
           }
-        } else {
+      } else {
           // Add item to the recipient actor
-          this._addItem(this.actor, dragData.item, 1)
+          const added = await this._addItem(this.actor, dragData.item, 1, false, { isTransfer: true })
+          if (!added) return;
           // Remove item from donor actor
           if (previousActor) {
-            await previousActor.items.get(dragData.item._id).delete()
+            await this._removeItem(previousActor, dragData.item.id ?? dragData.item._id, 1)
           }
-        }
       }
-    } else if (dragData && dragData.type === "Item") {
-      // Adding items from compendia
-      // We do not have the same dragData object in compendia as for Actor or Item
-      let itemToAdd = item
-
-      // Somehow previous item from passed data object is empty. Let's try to get item from passed event
-      if (!itemToAdd) {
-        let dragEventData = TextEditor.getDragEventData(event)
-        itemToAdd = await fromUuid(dragEventData.uuid)
-      }
-
-      if (itemToAdd) {
-        this._addItem(this.actor, itemToAdd, 1)
-      }
-    } else {
-      super._onDrop(event, data);
     }
   },
 
@@ -120,26 +148,55 @@ export let itemMixin = {
 
   async _removeItemsOfType(type) {
     let actor = this.actor;
-    actor.deleteEmbeddedDocuments("Item", actor.items.filter(item => item.type === type).map(item => item.id))
+    return actor.deleteEmbeddedDocuments("Item", actor.items.filter(item => item.type === type).map(item => item.id))
   },
 
   async _removeItem(actor, itemId, quantityToRemove) {
-    actor.removeItem(itemId, quantityToRemove)
+    if (!actor?.items?.get(itemId)) return false;
+    const quantity = getValidItemQuantity(quantityToRemove, actor.items.get(itemId).system.quantity);
+    if (!quantity) return false;
+    await actor.removeItem(itemId, quantity)
+    return true;
   },
 
-  async _addItem(actor, Additem, numberOfItem, forcecreate = false) {
-    let foundItem = (actor.items).find(item => item.name == Additem.name && item.type == Additem.type);
+  async _addItem(actor, Additem, numberOfItem, forcecreate = false, options = {}) {
+    const currencyDeposit = await depositCurrencyItem(
+      actor,
+      Additem,
+      numberOfItem,
+      `${game.i18n.localize("WITCHER.CurrencyLedger.TransferredItem")} ${Additem.name}`,
+    );
+    if (currencyDeposit) return currencyDeposit.deposited;
+
+    const isTransport = Additem.type === "mount";
+    const isContainer = isContainerItem(Additem);
+    const isUniqueStorage = isTransport || isContainer;
+    let foundItem = isUniqueStorage ? null : findStackableInventoryItem(actor.items, Additem);
     if (foundItem && !forcecreate) {
       await foundItem.update({ 'system.quantity': Number(foundItem.system.quantity) + Number(numberOfItem) })
     }
     else {
-      let newItem = { ...Additem };
+      let newItem = deepClone(Additem.toObject?.() ?? Additem);
+      if (isContainer) newItem = prepareContainerItemSource(newItem);
 
       if (numberOfItem) {
-        newItem.system.quantity = Number(numberOfItem)
+        newItem.system.quantity = isUniqueStorage ? 1 : Number(numberOfItem)
+      }
+      if (isTransport && options.isTransfer) {
+        newItem.system.accessories = [];
+        newItem.system.cargo = [];
+        newItem.system.pullerId = "";
+      }
+      if (isContainer && options.isTransfer) {
+        newItem.system.content = [];
+        newItem.system.isStored = false;
+      }
+      if (options.isTransfer && newItem.type === "diagrams") {
+        newItem.system.learned = false;
       }
       await actor.createEmbeddedDocuments("Item", [newItem]);
     }
+    return true;
   },
 
   async _onItemAdd(event) {
@@ -188,30 +245,45 @@ export let itemMixin = {
       itemData.system = { type: "alchemical", level: "novice", isFormulae: true };
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   },
 
   async _onSpellRoll(event, itemId = null) {
 
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
     if (!itemId) {
       itemId = event.currentTarget.closest(".item").dataset.itemId;
     }
     let spellItem = this.actor.items.get(itemId);
+    const spellShieldDefinition = getSpellShieldDefinition(spellItem);
+    const shieldAvailability = canApplySpellShieldBuff(this.actor, spellShieldDefinition);
+    if (spellShieldDefinition && !shieldAvailability.allowed) {
+      return ui.notifications.warn(game.i18n.format("WITCHER.SpellBuff.ShieldAlreadyActive", {
+        spell: shieldAvailability.lifecycle?.spellName ?? spellItem.name,
+      }));
+    }
     let rollFormula = `1d10`
+    let spellSkill = null;
+    let spellEffectSkill = null;
     rollFormula += !displayRollDetails ? `+${this.actor.system.stats.will.current}` : `+${this.actor.system.stats.will.current}[${game.i18n.localize("WITCHER.StWill")}]`;
     switch (spellItem.system.class) {
       case "Witcher":
       case "Invocations":
       case "Spells":
-        rollFormula += !displayRollDetails ? `+${this.actor.system.skills.will.spellcast.value}` : `+${this.actor.system.skills.will.spellcast.value}[${game.i18n.localize("WITCHER.SkWillSpellcastLable")}]`;
+        spellSkill = this.actor.system.skills.will.spellcast;
+        spellEffectSkill = "WITCHER.SkWillSpellcastLable";
+        rollFormula += !displayRollDetails ? `+${spellSkill.value}` : `+${spellSkill.value}[${game.i18n.localize("WITCHER.SkWillSpellcastLable")}]`;
         break;
       case "Rituals":
-        rollFormula += !displayRollDetails ? `+${this.actor.system.skills.will.ritcraft.value}` : `+${this.actor.system.skills.will.ritcraft.value}[${game.i18n.localize("WITCHER.SkWillRitCraftLable")}]`;
+        spellSkill = this.actor.system.skills.will.ritcraft;
+        spellEffectSkill = "WITCHER.SkWillRitCraftLable";
+        rollFormula += !displayRollDetails ? `+${spellSkill.value}` : `+${spellSkill.value}[${game.i18n.localize("WITCHER.SkWillRitCraftLable")}]`;
         break;
       case "Hexes":
-        rollFormula += !displayRollDetails ? `+${this.actor.system.skills.will.hexweave.value}` : `+${this.actor.system.skills.will.hexweave.value}[${game.i18n.localize("WITCHER.SkWillHexLable")}]`;
+        spellSkill = this.actor.system.skills.will.hexweave;
+        spellEffectSkill = "WITCHER.SkWillHexLable";
+        rollFormula += !displayRollDetails ? `+${spellSkill.value}` : `+${spellSkill.value}[${game.i18n.localize("WITCHER.SkWillHexLable")}]`;
         break;
     }
 
@@ -303,7 +375,33 @@ export let itemMixin = {
       return ui.notifications.error(game.i18n.localize("WITCHER.Spell.notEnoughSta"));
     }
 
-    this.actor.update({
+    const casterToken = this.actor.getControlledToken();
+    let spellVisualEffect = null;
+    let spellAreaTargets = [];
+    if (spellItem.system.createTemplate) {
+      try {
+        spellVisualEffect = await spellItem.createSpellVisualEffectIfApplicable(casterToken, {
+          staminaSpent: origStaCost,
+        });
+      } catch (error) {
+        console.error("TheWitcherTRPG | Could not place the spell area.", error);
+        ui.notifications.error(game.i18n.localize("WITCHER.SpellArea.PlacementFailed"));
+        return;
+      }
+      if (spellVisualEffect?.cancelled) {
+        ui.notifications.info(game.i18n.localize("WITCHER.SpellArea.Cancelled"));
+        return;
+      }
+
+      const selectedTargets = await chooseSpellAreaTargets(spellItem, spellVisualEffect?.targets ?? []);
+      if (selectedTargets === null) {
+        await spellItem.removeSpellVisualEffect(spellVisualEffect);
+        return;
+      }
+      spellAreaTargets = selectedTargets;
+    }
+
+    await this.actor.update({
       'system.derivedStats.sta.value': newSta
     });
 
@@ -322,6 +420,8 @@ export let itemMixin = {
     if (customModifier < 0) { rollFormula += !displayRollDetails ? `${customModifier}` : `${customModifier}[${game.i18n.localize("WITCHER.Settings.Custom")}]` }
     if (customModifier > 0) { rollFormula += !displayRollDetails ? `+${customModifier}` : `+${customModifier}[${game.i18n.localize("WITCHER.Settings.Custom")}]` }
     if (isExtraAttack) { rollFormula += !displayRollDetails ? `-3` : `-3[${game.i18n.localize("WITCHER.Dialog.attackExtra")}]` }
+    rollFormula = addModifiers(spellSkill?.modifiers, rollFormula);
+    rollFormula = addActorSkillEffectModifiers(this.actor, spellEffectSkill, rollFormula);
 
     let spellSource = ''
     switch (spellItem.system.source) {
@@ -332,10 +432,17 @@ export let itemMixin = {
       case "Water": spellSource = "WITCHER.Spell.Water"; break;
     }
 
+    const spellDefence = getEffectiveSpellDefence(spellItem);
+    const spellHasDefence = hasSpellDefenceRoll(spellDefence);
+    const hasSpellArea = spellVisualEffect?.type === "Region" && Boolean(spellVisualEffect.document);
+    const spellMessageClass = spellHasDefence ? "attack-message spell-attack-message" : "spell-message";
+    const spellLocation = this.actor.getLocationObject("randomSpell");
+    let spellDamage = null;
+
     let messageData = {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flags: spellItem.getSpellFlags(),
-      flavor: `<h2><img src="${spellItem.img}" class="item-img" />${spellItem.name}</h2>
+      flags: { thewitchertrpg: spellItem.getSpellFlags() },
+      flavor: `<div class="${spellMessageClass}" data-location="${spellLocation.name}" data-defence="${escapeAttribute(spellDefence)}"><h2><img src="${spellItem.img}" class="item-img" />${spellItem.name}</h2>
             <div><b>${game.i18n.localize("WITCHER.Spell.StaCost")}: </b>${staCostDisplay}</div>
             <div><b>${game.i18n.localize("WITCHER.Mutagen.Source")}: </b>${game.i18n.localize(spellSource)}</div>
             <div><b>${game.i18n.localize("WITCHER.Spell.Effect")}: </b>${spellItem.system.effect}</div>`
@@ -346,8 +453,8 @@ export let itemMixin = {
     if (spellItem.system.duration) {
       messageData.flavor += `<div><b>${game.i18n.localize("WITCHER.Spell.Duration")}: </b>${spellItem.system.duration}</div>`
     }
-    if (spellItem.system.defence) {
-      messageData.flavor += `<div><b>${game.i18n.localize("WITCHER.Spell.Defence")}: </b>${spellItem.system.defence}</div>`
+    if (spellDefence) {
+      messageData.flavor += `<div><b>${game.i18n.localize("WITCHER.Spell.Defence")}: </b>${spellDefence}</div>`
     }
     if (spellItem.system.preparationTime) {
       messageData.flavor += `<div><b>${game.i18n.localize("WITCHER.Spell.PrepTime")}: </b>${spellItem.system.preparationTime}</div>`
@@ -366,24 +473,40 @@ export let itemMixin = {
     }
 
     if (spellItem.system.causeDamages) {
-      let effects = JSON.stringify(spellItem.system.effects)
-      let locationJSON = JSON.stringify(this.actor.getLocationObject("randomSpell"))
+      let damageType = getSpellDamageType(spellItem)
+      let ignoreArmor = getSpellIgnoresArmor(spellItem)
 
       let dmg = spellItem.system.damage || "0"
       if (spellItem.system.staminaIsVar) {
         dmg = this.calcStaminaMulti(origStaCost, dmg)
       }
 
-      messageData.flavor += `<button class="damage" data-img="${spellItem.img}" data-name="${spellItem.name}" data-dmg="${dmg}" data-location='${locationJSON}' data-effects='${effects}'>${game.i18n.localize("WITCHER.table.Damage")}</button>`;
-    }
+      spellDamage = {
+        formula: dmg,
+        location: spellLocation,
+        effects: deepClone(spellItem.system.effects ?? []),
+        duration: spellItem.system.duration,
+        type: damageType,
+        ignoreArmor,
+        applyEffectsOnHit: true,
+      };
 
-    if (spellItem.system.createsShield) {
-      let shield = spellItem.system.shield || "0"
-      if (spellItem.system.staminaIsVar) {
-        shield = this.calcStaminaMulti(origStaCost, shield)
+      const formulaDisplay = getSpellDamageFormulaDisplay(spellItem.system.damage, dmg, {
+        isVariable: spellItem.system.staminaIsVar,
+        staminaSpent: origStaCost,
+      });
+      const displayedFormula = formulaDisplay.scalesWithStamina
+        ? game.i18n.format("WITCHER.Spell.VariableDamageFormula", {
+          total: formulaDisplay.total,
+          base: formulaDisplay.base,
+          stamina: formulaDisplay.stamina,
+        })
+        : formulaDisplay.total;
+      messageData.flavor += `<div class="spell-damage-formula"><b>${game.i18n.localize("WITCHER.table.Damage")}:</b> ${escapeAttribute(displayedFormula)}</div>`;
+
+      if (!spellHasDefence && !hasSpellArea) {
+        messageData.flavor += `<button class="damage">${game.i18n.localize("WITCHER.table.Damage")}</button>`;
       }
-
-      messageData.flavor += `<button class="shield" data-img="${spellItem.img}" data-name="${spellItem.name}" data-shield="${shield}" data-actor="${this.actor.uuid}">${game.i18n.localize("WITCHER.Spell.Short.Shield")}</button>`;
     }
 
     if (spellItem.system.doesHeal) {
@@ -395,19 +518,58 @@ export let itemMixin = {
       messageData.flavor += `<button class="heal" data-img="${spellItem.img}" data-name="${spellItem.name}" data-heal="${heal}" data-actor="${this.actor.uuid}">${game.i18n.localize("WITCHER.Spell.Short.Heal")}</button>`;
     }
 
+    messageData.flavor += `</div>`;
     let config = new RollConfig()
     config.showCrit = true
-    await extendedRoll(rollFormula, messageData, config)
-
-    let token = this.actor.getControlledToken();
-
-    if (token?.name) {
-      await spellItem.createSpellVisualEffectIfApplicable(token);
-      await spellItem.deleteSpellVisualEffect();
+    config.showResult = false
+    const roll = await extendedRoll(rollFormula, messageData, config)
+    const attackTotal = Number(roll.total);
+    messageData.flavor = messageData.flavor.replace(
+      `class="${spellMessageClass}"`,
+      `class="${spellMessageClass}" data-attack-total="${attackTotal}"`,
+    );
+    messageData.flags.thewitchertrpg.attackTotal = attackTotal;
+    messageData.flags.thewitchertrpg.attackLocation = spellLocation.name;
+    if (spellDamage) messageData.flags.thewitchertrpg.damage = spellDamage;
+    if (hasSpellArea) {
+      const spellArea = createSpellAreaResolution({
+        region: spellVisualEffect.document,
+        casterToken,
+        spell: spellItem,
+        targets: spellAreaTargets,
+        attackTotal,
+        defence: spellDefence,
+        hasDefence: spellHasDefence,
+        hasDamage: Boolean(spellDamage),
+      });
+      messageData.flags.thewitchertrpg.spellArea = spellArea;
+      messageData.flavor += renderSpellAreaResolution(spellArea, game.i18n);
     }
+    const spellMessage = await roll.toMessage(messageData)
+    if (spellShieldDefinition) {
+      try {
+        const shieldResult = await applySpellShieldBuff(this.actor, spellItem, {
+          definition: spellShieldDefinition,
+          staminaSpent: origStaCost,
+        });
+        if (!shieldResult.applied) {
+          ui.notifications.error(game.i18n.localize("WITCHER.SpellBuff.ShieldApplicationFailed"));
+        }
+      } catch (error) {
+        console.error("TheWitcherTRPG | Could not apply the spell shield buff.", error);
+        ui.notifications.error(game.i18n.localize("WITCHER.SpellBuff.ShieldApplicationFailed"));
+      }
+    }
+    if (hasSpellArea && spellMessage?.id) {
+      await spellVisualEffect.document.update({
+        "flags.thewitchertrpg.spellArea.messageId": spellMessage.id,
+      }, { witcherSpellAreaEffect: true });
+      await endResolvedSpellArea(spellMessage);
+    }
+    await spellItem.deleteSpellVisualEffect(spellVisualEffect);
   },
 
-  _onItemInlineEdit(event) {
+  async _onItemInlineEdit(event) {
     event.preventDefault();
     event.stopPropagation()
     let element = event.currentTarget;
@@ -423,7 +585,19 @@ export let itemMixin = {
       value = false
     }
 
-    return item.update({ [field]: value });
+    if (item.type === "diagrams" && field === "system.quantity") {
+      const quantity = Number(value);
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        return ui.notifications.error(game.i18n.localize("WITCHER.Items.InvalidQuantity"));
+      }
+      value = Math.floor(quantity);
+      if (value === 0 && !item.system.learned) return item.delete();
+    }
+
+    const updateData = { [field]: value };
+    return item.update(item.type === "mount"
+      ? buildTransportDocumentUpdate(updateData, item.system)
+      : updateData);
   },
 
   _onItemEdit(event) {
@@ -432,7 +606,22 @@ export let itemMixin = {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    renderDocumentSheet(item)
+  },
+
+  async _onContainerContents(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const itemId = event.currentTarget.closest(".item")?.dataset.itemId;
+    const item = this.actor.items.get(itemId);
+    if (!item?.sheet) return false;
+
+    if (typeof item.sheet.openContents === "function") {
+      await item.sheet.openContents();
+      return true;
+    }
+    await renderDocumentSheet(item);
+    return true;
   },
 
   async _onItemShow(event) {
@@ -441,21 +630,45 @@ export let itemMixin = {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: item.name,
       content: `<img src="${item.img}" alt="${item.img}" width="100%" />`,
       buttons: {}
     }, {
       width: 520,
       resizable: true
-    }).render(true);
+    }));
   },
 
   async _onItemDelete(event) {
     event.preventDefault();
     event.stopPropagation()
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
-    return await this.actor.items.get(itemId).delete();
+    const item = this.actor.items.get(itemId);
+    if (!item) return false;
+
+    if (item.type === "diagrams" && item.system.learned) {
+      if (Number(item.system.quantity) > 0) {
+        await item.update({ "system.quantity": 0 });
+        return ui.notifications.info(game.i18n.localize("WITCHER.craft.PhysicalCopiesDiscarded"));
+      }
+      if (!await this._confirmRecipeForget(item)) return false;
+    }
+
+    return item.delete();
+  },
+
+  async _confirmRecipeForget(item) {
+    let confirmed = false;
+    await buttonDialog({
+      title: game.i18n.localize("WITCHER.craft.ForgetRecipe"),
+      content: game.i18n.format("WITCHER.craft.ForgetRecipeConfirm", { recipe: item.name }),
+      buttons: [
+        [game.i18n.localize("WITCHER.Button.Cancel"), () => {}],
+        [game.i18n.localize("WITCHER.craft.ForgetRecipe"), () => { confirmed = true; }],
+      ],
+    });
+    return confirmed;
   },
 
   async _chooseEnhancement(event) {
@@ -471,18 +684,18 @@ export let itemMixin = {
       enhancements = enhancements.filter(e => e.system.applied == false && (e.system.type == "armor" || e.system.type == "glyph"));
     }
 
-    let quantity = enhancements.sum("quantity")
+    let quantity = sumItemProperty(enhancements, "quantity")
     if (quantity == 0) {
       content += `<div class="error-display">${game.i18n.localize("WITCHER.Enhancement.NoEnhancement")}</div>`
     } else {
       let enhancementsOption = ``
       enhancements.forEach(element => {
-        enhancementsOption += `<option value="${element._id}"> ${element.name}(${element.system.quantity}) </option>`;
+        enhancementsOption += `<option value="${element.id}"> ${element.name}(${element.system.quantity}) </option>`;
       });
       content += `<div><label>${game.i18n.localize("WITCHER.Dialog.Enhancement")}: <select name="enhancement">${enhancementsOption}</select></label></div>`
     }
 
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: `${game.i18n.localize("WITCHER.Enhancement.ChooseTitle")}`,
       content,
       buttons: {
@@ -492,31 +705,29 @@ export let itemMixin = {
         },
         Apply: {
           label: `${game.i18n.localize("WITCHER.Dialog.Apply")}`,
-          callback: (html) => {
+          callback: async (html) => {
             let enhancementId = undefined
             if (html.find("[name=enhancement]")[0]) {
               enhancementId = html.find("[name=enhancement]")[0].value;
             }
             let choosenEnhancement = this.actor.items.get(enhancementId)
             if (item && choosenEnhancement) {
-              let newEnhancementList = []
-              let added = false
-              item.system.enhancementItems.forEach(element => {
-                if ((JSON.stringify(element) === '{}' || !element) && !added) {
-                  element = choosenEnhancement
-                  added = true
-                }
-                newEnhancementList.push(element)
-              });
+              const enhancementItemIds = deepClone(item.system.enhancementItemIds ?? [])
+                .filter(id => this.actor.items.has(id))
+              if (enhancementItemIds.length >= Number(item.system.enhancements)) {
+                return ui.notifications.error(game.i18n.localize("WITCHER.Enhancement.NoSlot"));
+              }
+              enhancementItemIds.push(choosenEnhancement.id)
+
               if (type == "weapon") {
-                item.update({ 'system.enhancementItems': newEnhancementList })
+                await item.update({ 'system.enhancementItemIds': enhancementItemIds })
               }
               else {
-                let allEffects = item.system.effects
+                let allEffects = deepClone(item.system.effects ?? [])
                 allEffects.push(...choosenEnhancement.system.effects)
                 if (choosenEnhancement.system.type == "armor" || choosenEnhancement.system.type == "glyph") {
-                  item.update({
-                    'system.enhancementItems': newEnhancementList,
+                  await item.update({
+                    'system.enhancementItemIds': enhancementItemIds,
                     "system.headStopping": item.system.headStopping + choosenEnhancement.system.stopping,
                     "system.headMaxStopping": item.system.headMaxStopping + choosenEnhancement.system.stopping,
                     "system.torsoStopping": item.system.torsoStopping + choosenEnhancement.system.stopping,
@@ -536,25 +747,29 @@ export let itemMixin = {
                   })
                 }
                 else {
-                  item.update({ 'system.effects': allEffects })
+                  await item.update({
+                    'system.enhancementItemIds': enhancementItemIds,
+                    'system.effects': allEffects
+                  })
                 }
               }
               let newName = choosenEnhancement.name + "(Applied)"
-              let newQuantity = choosenEnhancement.system.quantity
-              choosenEnhancement.update({
+              let newQuantity = Number(choosenEnhancement.system.quantity)
+              if (newQuantity > 1) {
+                const remainingEnhancements = deepClone(choosenEnhancement.toObject())
+                remainingEnhancements.system.applied = false
+                await this._addItem(this.actor, remainingEnhancements, newQuantity - 1, true)
+              }
+              await choosenEnhancement.update({
                 'name': newName,
                 'system.applied': true,
                 'system.quantity': 1
               })
-              if (newQuantity > 1) {
-                newQuantity -= 1
-                this._addItem(this.actor, choosenEnhancement, newQuantity, true)
-              }
             }
           }
         }
       }
-    }).render(true)
+    }))
   },
 
   _onItemDisplayInfo(event) {
@@ -566,7 +781,7 @@ export let itemMixin = {
   },
 
   async _onItemRoll(event, itemId = null) {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
     if (!itemId) {
       itemId = event.currentTarget.closest(".item").dataset.itemId;
@@ -597,13 +812,15 @@ export let itemMixin = {
     let noAmmo = 0
     let ammunitionOption = ``
     if (item.system.usingAmmo) {
-      ammunitions = this.actor.items.filter(function (item) { return item.type == "weapon" && item.system.isAmmo });
-      let quantity = ammunitions.sum("quantity")
+      ammunitions = this.actor.items.filter(function (item) {
+        return item.type == "weapon" && item.system.isAmmo && Number(item.system.quantity) > 0;
+      });
+      let quantity = sumItemProperty(ammunitions, "quantity")
       if (quantity <= 0) {
         noAmmo = 1;
       } else {
         ammunitions.forEach(element => {
-          ammunitionOption += `<option value="${element._id}"> ${element.name}(${element.system.quantity}) </option>`;
+          ammunitionOption += `<option value="${element.id}"> ${element.name}(${element.system.quantity}) </option>`;
         });
       }
     }
@@ -612,9 +829,9 @@ export let itemMixin = {
     let meleeBonus = this.actor.system.attackStats.meleeBonus
     let data = { item, attackSkill, displayDmgFormula, isMeleeAttack, noAmmo, noThrowable, ammunitionOption, ammunitions, meleeBonus: meleeBonus }
     const myDialogOptions = { width: 500 }
-    const dialogTemplate = await renderTemplate("systems/TheWitcherTRPG/templates/sheets/weapon-attack.hbs", data)
+    const dialogTemplate = await renderTemplate("systems/thewitchertrpg/templates/sheets/weapon-attack.hbs", data)
 
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: `${game.i18n.localize("WITCHER.Dialog.attackWith")}: ${item.name}`,
       content: dialogTemplate,
       buttons: {
@@ -653,6 +870,17 @@ export let itemMixin = {
               strike: strike,
               type: damageType
             };
+            if (strike == "fast") {
+              attacknumber = 2;
+            }
+
+            const ammunitionItem = ammunition ? this.actor.items.get(ammunition) : null;
+            if (ammunition && (!ammunitionItem || Number(ammunitionItem.system.quantity) < attacknumber)) {
+              return ui.notifications.error(game.i18n.localize("WITCHER.Dialog.NoAmmunition"));
+            }
+            if (item.isWeaponThrowable() && Number(item.system.quantity) < attacknumber) {
+              return ui.notifications.error(game.i18n.localize("WITCHER.Dialog.NoThrowable"));
+            }
 
             if (isExtraAttack) {
               let newSta = this.actor.system.derivedStats.sta.value - 3
@@ -660,26 +888,22 @@ export let itemMixin = {
               if (newSta < 0) {
                 return ui.notifications.error(game.i18n.localize("WITCHER.Spell.notEnoughSta"));
               }
-              this.actor.update({
+              await this.actor.update({
                 'system.derivedStats.sta.value': newSta
               });
             }
 
             let allEffects = foundry.utils.deepClone(item.system.effects)
             if (ammunition) {
-              let item = this.actor.items.get(ammunition);
-              let newQuantity = item.system.quantity - 1;
-              item.update({ "system.quantity": newQuantity })
-              allEffects.push(...item.system.effects)
-              damage.ammunition = item;
+              const newQuantity = Number(ammunitionItem?.system.quantity) - attacknumber;
+              await ammunitionItem.update({ "system.quantity": newQuantity })
+              allEffects.push(...ammunitionItem.system.effects)
+              damage.ammunition = ammunitionItem;
             }
 
             if (item.isWeaponThrowable()) {
-              let newQuantity = item.system.quantity - 1;
-              if (newQuantity < 0) {
-                return
-              }
-              item.update({ "system.quantity": newQuantity })
+              let newQuantity = Number(item.system.quantity) - attacknumber;
+              await item.update({ "system.quantity": newQuantity })
               allEffects.push(...item.system.effects)
             }
 
@@ -693,9 +917,6 @@ export let itemMixin = {
             }
             damage.effects = allEffects;
 
-            if (strike == "fast") {
-              attacknumber = 2;
-            }
             for (let i = 0; i < attacknumber; i++) {
               let attFormula = "1d10"
               let damageFormula = formula;
@@ -841,46 +1062,63 @@ export let itemMixin = {
               }
 
               attFormula = addModifiers(modifiers, attFormula)
+              const attackEffectSkill = {
+                Brawling: "WITCHER.SkRefBrawling",
+                Melee: "WITCHER.SkRefMelee",
+                "Small Blades": "WITCHER.SkRefSmall",
+                "Staff/Spear": "WITCHER.SkRefStaff",
+                Swordsmanship: "WITCHER.SkRefSwordsmanship",
+                Archery: "WITCHER.SkDexArchery",
+                Athletics: "WITCHER.SkDexAthletics",
+                Crossbow: "WITCHER.SkDexCrossbow",
+              }[attackSkill.name];
+              attFormula = addActorSkillEffectModifiers(this.actor, attackEffectSkill, attFormula);
 
-              messageData.flavor = `<div class="attack-message"><h1><img src="${item.img}" class="item-img" />${game.i18n.localize("WITCHER.Attack")}: ${item.name}</h1>`;
+              messageData.flavor = `<div class="attack-message" data-location="${touchedLocation.name}"><h1><img src="${item.img}" class="item-img" />${game.i18n.localize("WITCHER.Attack")}: ${item.name}</h1>`;
               messageData.flavor += `<span>  ${game.i18n.localize("WITCHER.Armor.Location")}: ${touchedLocation.alias} = ${touchedLocation.locationFormula} </span>`;
-
-              messageData.flavor += `<button class="damage">${game.i18n.localize("WITCHER.table.Damage")}</button>`;
 
               let config = new RollConfig()
               config.showResult = false
               let roll = await extendedRoll(attFormula, messageData, config)
+              const attackTotal = Number(roll.total);
+              messageData.flavor = messageData.flavor.replace(
+                `class="attack-message"`,
+                `class="attack-message" data-attack-total="${attackTotal}"`
+              );
 
               if (item.system.rollOnlyDmg) {
-                rollDamage(item, damage)
+                await rollDamage(item, damage)
               } else {
                 let message = await roll.toMessage(messageData);
 
-                message.setFlag('TheWitcherTRPG', 'attack', item.getAttackSkillFlags())
-                message.setFlag('TheWitcherTRPG', 'damage', damage)
+                await message.setFlag('thewitchertrpg', 'attack', item.getAttackSkillFlags())
+                await message.setFlag('thewitchertrpg', 'attackTotal', attackTotal)
+                await message.setFlag('thewitchertrpg', 'attackLocation', touchedLocation.name)
+                await message.setFlag('thewitchertrpg', 'damage', damage)
               }
             }
           }
         }
       }
-    }, myDialogOptions).render(true)
+    }, myDialogOptions))
   },
 
-  _onSpellDisplay(event) {
+  async _onSpellDisplay(event) {
     event.preventDefault();
     let section = event.currentTarget.closest(".spell");
-    this.actor.update({ [`system.pannels.${section.dataset.spelltype}IsOpen`]: !this.actor.system.pannels[section.dataset.spelltype + 'IsOpen'] });
+    await this.actor.update({ [`system.pannels.${section.dataset.spelltype}IsOpen`]: !this.actor.system.pannels[section.dataset.spelltype + 'IsOpen'] });
   },
 
-  _onSubstanceDisplay(event) {
+  async _onSubstanceDisplay(event) {
     event.preventDefault();
     let section = event.currentTarget.closest(".substance");
-    this.actor.update({ [`system.pannels.${section.dataset.subtype}IsOpen`]: !this.actor.system.pannels[section.dataset.subtype + 'IsOpen'] });
+    await this.actor.update({ [`system.pannels.${section.dataset.subtype}IsOpen`]: !this.actor.system.pannels[section.dataset.subtype + 'IsOpen'] });
   },
 
   itemListener(html) {
     html.find(".add-item").on("click", this._onItemAdd.bind(this));
     html.find(".item-edit").on("click", this._onItemEdit.bind(this));
+    html.find(".container-contents-open").on("click", this._onContainerContents.bind(this));
     html.find(".item-show").on("click", this._onItemShow.bind(this));
     html.find(".item-delete").on("click", this._onItemDelete.bind(this));
     html.find(".inline-edit").change(this._onItemInlineEdit.bind(this));
@@ -892,6 +1130,7 @@ export let itemMixin = {
     html.find(".item-weapon-display").on("click", this._onItemDisplayInfo.bind(this));
     html.find(".item-armor-display").on("click", this._onItemDisplayInfo.bind(this));
     html.find(".item-valuable-display").on("click", this._onItemDisplayInfo.bind(this));
+    html.find(".item-transport-display").on("click", this._onItemDisplayInfo.bind(this));
     html.find(".item-spell-display").on("click", this._onItemDisplayInfo.bind(this));
     html.find(".item-substance-display").on("click", this._onSubstanceDisplay.bind(this));
 
@@ -905,11 +1144,7 @@ export let itemMixin = {
       let item = this.actor.items.get(itemId);
       ev.originalEvent.dataTransfer.setData(
         "text/plain",
-        JSON.stringify({
-          item: item,
-          actor: this.actor,
-          type: "itemDrop",
-        }),
+        JSON.stringify(item.toDragData()),
       )
     });
 
@@ -919,7 +1154,88 @@ export let itemMixin = {
       permissions: { dragstart: this._canDragStart.bind(this), drop: this._canDragDrop.bind(this) },
       callbacks: { dragstart: this._onDragStart.bind(this), drop: this._onDrop.bind(this) }
     })
-    this._dragDrop.push(newDragDrop);
+    newDragDrop.bind(this.element);
+    this._witcherDragDrop = newDragDrop;
   }
 
+}
+
+function getSpellDamageType(spellItem) {
+  return spellItem.system.damageType || inferSpellDamageType(spellItem);
+}
+
+function getSpellIgnoresArmor(spellItem) {
+  return Boolean(spellItem.system.ignoreArmor) || spellEffectIgnoresArmor(spellItem.system.effect);
+}
+
+function inferSpellDamageType(spellItem) {
+  const source = String(spellItem.system?.source ?? "").toLowerCase();
+  const effect = String(spellItem.system?.effect ?? "").toLowerCase();
+
+  if (/slashing,\s*piercing,\s*or\s*bludgeoning/.test(effect)) return "";
+  if (/\bslash(?:ing)?\b|\bblade\b/.test(effect)) return "slashing";
+  if (/\bpierc(?:e|ing)\b|\bneedle\b|\bspike\b|\bshard\b/.test(effect)) return "piercing";
+  if (/\bbludgeon(?:ing)?\b|\bconcussive\b|\bslam\b|\bcrush\b/.test(effect)) return "bludgeoning";
+  if (
+    ["air", "earth", "fire", "water", "mixedelements"].includes(source)
+    || /\bfire\b|\bflame\b|\bburn(?:ing)?\b|\blightning\b|\belectric\b|\bice\b|\bfrost\b|\bfrozen\b|\bacid\b/.test(effect)
+  ) {
+    return "elemental";
+  }
+
+  return "";
+}
+
+function spellEffectIgnoresArmor(effect) {
+  return /\b(?:cannot|can't)\s+be\s+blocked\s+by\s+armor\b|\bignores?\s+armor\b|\bbypasses?\s+armor\b/i.test(String(effect ?? ""));
+}
+
+function escapeAttribute(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  })[character]);
+}
+
+async function chooseSpellAreaTargets(spellItem, candidates) {
+  if (!candidates.length) return [];
+
+  let confirmed = false;
+  let selectedTargets = [];
+  const rows = candidates.map(target => `
+    <label class="spell-area-target-choice">
+      <input type="checkbox" name="spellAreaTarget" value="${escapeAttribute(target.tokenUuid)}" ${target.isCaster ? "" : "checked"}>
+      <img src="${escapeAttribute(target.img)}" alt="">
+      <span>${escapeAttribute(target.name)}</span>
+      ${target.isCaster ? `<small>${game.i18n.localize("WITCHER.SpellArea.Caster")}</small>` : ""}
+    </label>`).join("");
+
+  await buttonDialog({
+    title: game.i18n.format("WITCHER.SpellArea.TargetsTitle", { spell: spellItem.name }),
+    content: `<div class="spell-area-target-dialog">
+      <p>${game.i18n.localize("WITCHER.SpellArea.TargetsHint")}</p>
+      <div class="spell-area-target-choices">${rows}</div>
+    </div>`,
+    buttons: [[game.i18n.localize("WITCHER.Button.Continue"), html => {
+      const selectedUuids = new Set(html.find('[name="spellAreaTarget"]:checked').map((_, input) => input.value).get());
+      selectedTargets = candidates.filter(target => selectedUuids.has(target.tokenUuid));
+      confirmed = true;
+    }]],
+  });
+
+  return confirmed ? selectedTargets : null;
+}
+
+function getValidItemQuantity(requestedQuantity, availableQuantity) {
+  const requested = Number(requestedQuantity);
+  const available = Number(availableQuantity);
+  if (!Number.isInteger(requested) || requested < 1 || !Number.isFinite(available) || available < 1) {
+    ui.notifications.error(game.i18n.localize("WITCHER.Items.InvalidQuantity"));
+    return 0;
+  }
+
+  return Math.min(requested, Math.floor(available));
 }

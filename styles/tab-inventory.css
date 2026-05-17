@@ -25,6 +25,54 @@ table th {
     flex-direction: column;
 }
 
+.currency-list {
+    display: flex;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.currency-readonly {
+    align-items: center;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.currency-readonly input:disabled {
+    color: inherit;
+    opacity: 0.85;
+}
+
+.currency-ledger-open {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 1.5rem;
+    height: 1.5rem;
+    justify-content: center;
+}
+
+.currency-ledger-controls {
+    display: grid;
+    gap: 0.35rem 0.5rem;
+    grid-template-columns: max-content 1fr;
+    margin-bottom: 0.75rem;
+}
+
+.currency-ledger-controls input,
+.currency-ledger-controls select {
+    width: 100%;
+}
+
+.currency-ledger-history {
+    width: 100%;
+}
+
+.currency-ledger-history th,
+.currency-ledger-history td {
+    padding: 0.25rem;
+    text-align: left;
+    vertical-align: top;
+}
+
 .wrapper { 
     position: relative;
 }

@@ -1,17 +1,30 @@
 import WitcherActorSheet from "./WitcherActorSheet.js";
 import { buttonDialog } from "../../scripts/chat.js";
+import { ActorDocument, FolderDocument, WitcherDialog, renderApplication, renderDocumentSheet } from "../../setup/foundry-compat.js";
+import { applyCurrencyLedgerChange, CURRENCY_TYPES, depositCurrencyItem, migrateLegacyCurrencyItems } from "../../scripts/currencyLedger.js";
 
 export default class WitcherMonsterSheet extends WitcherActorSheet {
 
-    static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
-            classes: ["witcher", "sheet", "actor"],
-            width: 1120,
-            height: 600,
-            template: "systems/TheWitcherTRPG/templates/sheets/actor/actor-sheet.hbs",
-            tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
-        });
-    }
+    static DEFAULT_OPTIONS = {
+        classes: ["monster"],
+        position: {
+            width: 1180,
+            height: 860,
+        },
+        template: "systems/thewitchertrpg/templates/sheets/actor/actor-sheet.hbs",
+    };
+
+    static TABS = {
+        primary: {
+            initial: "skills",
+            tabs: [
+                { id: "skills" },
+                { id: "inventory" },
+                { id: "details" },
+                { id: "spells" },
+            ],
+        },
+    };
 
     getData() {
         let context = super.getData();
@@ -81,7 +94,7 @@ export default class WitcherMonsterSheet extends WitcherActorSheet {
         content += skillConfig
 
 
-        new Dialog({
+        renderApplication(new WitcherDialog({
             title: `${game.i18n.localize("WITCHER.Monster.SkillList")}`,
             content,
             buttons: {
@@ -91,8 +104,8 @@ export default class WitcherMonsterSheet extends WitcherActorSheet {
                 },
                 Apply: {
                     label: `${game.i18n.localize("WITCHER.Dialog.Apply")}`,
-                    callback: (html) => {
-                        this.actor.update({
+                    callback: async (html) => {
+                        await this.actor.update({
                             'system.skills.int.awareness.isVisible': html.find("[name=displayawareness]").prop("checked"),
                             'system.skills.int.business.isVisible': html.find("[name=displaybusiness]").prop("checked"),
                             'system.skills.int.deduction.isVisible': html.find("[name=displaydeduction]").prop("checked"),
@@ -155,22 +168,26 @@ export default class WitcherMonsterSheet extends WitcherActorSheet {
                     }
                 }
             }
-        }, { width: width }).render(true)
+        }, { width: width }))
     }
 
 
     async getOrCreateFolder() {
         let folderName = `${game.i18n.localize("WITCHER.Loot.Name")}`
-        let type = CONST.FOLDER_DOCUMENT_TYPES[0] //actor
+        let type = "Actor"
         let folder = game.folders?.find(folder => folder.type == type && folder.name === folderName)
         if (!folder) {
-            folder = await Folder.create({
-                name: folderName,
-                sorting: "a",
-                content: [],
-                type: type,
-                parent: null
-            })
+            try {
+                folder = await FolderDocument.create({
+                    name: folderName,
+                    sorting: "a",
+                    type: type,
+                    parent: null
+                }, { render: false })
+            } catch (error) {
+                console.warn("TheWitcherTRPG | Could not create loot folder.", error)
+                return null
+            }
         }
         return folder ? (folder[0] ? folder[0] : folder) : null
     }
@@ -196,20 +213,36 @@ export default class WitcherMonsterSheet extends WitcherActorSheet {
         if (cancel) {
             return
         } else {
+            multiplier = Number(multiplier)
+            if (!Number.isInteger(multiplier) || multiplier < 1) {
+                return ui.notifications.error(game.i18n.localize("WITCHER.Items.InvalidQuantity"))
+            }
+
             let folder = await this.getOrCreateFolder()
-            let newLoot = await Actor.create({
-                ...this.actor.toObject(),
+            const lootData = this.actor.toObject()
+            lootData.system.currency = Object.fromEntries(CURRENCY_TYPES.map(currency => [currency, 0]))
+            lootData.system.currencyLedger = []
+            let newLoot = await ActorDocument.create({
+                ...lootData,
                 type: "loot",
                 name: this.actor.name + "--" + `${game.i18n.localize("WITCHER.Loot.Name")}`,
                 folder: folder?.id,
             });
 
-            newLoot.items.forEach(async item => {
+            const extractionReason = game.i18n.localize("WITCHER.CurrencyLedger.ExtractedLoot")
+            for (const currency of CURRENCY_TYPES) {
+                const amount = Number(this.actor.system.currency?.[currency]) * multiplier
+                if (Number.isInteger(amount) && amount > 0) {
+                    await applyCurrencyLedgerChange(newLoot, currency, amount, extractionReason)
+                }
+            }
+
+            for (const item of newLoot.items) {
                 let newQuantity = item.system.quantity
                 if (typeof (newQuantity) === "string" && item.system.quantity.includes("d")) {
                     let total = 0
                     for (let i = 0; i < multiplier; i++) {
-                        let roll = await new Roll(item.system.quantity).evaluate({ async: true })
+                        let roll = await new Roll(item.system.quantity).evaluate()
                         total += Math.ceil(roll.total)
                     }
                     newQuantity = total
@@ -217,14 +250,22 @@ export default class WitcherMonsterSheet extends WitcherActorSheet {
                     newQuantity = Number(newQuantity) * multiplier
                 }
 
+                const currencyDeposit = await depositCurrencyItem(newLoot, item, newQuantity, extractionReason)
+                if (currencyDeposit) {
+                    if (currencyDeposit.deposited) await item.delete()
+                    continue
+                }
+
                 let itemGeneratedFromRollTable = await item.checkIfItemHasRollTable(newQuantity)
 
                 if (!itemGeneratedFromRollTable) {
-                    item.update({ 'system.quantity': newQuantity })
+                    await item.update({ 'system.quantity': newQuantity })
                 }
-            });
+            }
 
-            await newLoot.sheet.render(true)
+            await migrateLegacyCurrencyItems(newLoot, extractionReason)
+
+            await renderDocumentSheet(newLoot)
         }
     }
 }

@@ -3,6 +3,6 @@ const fields = foundry.data.fields;
 
 export default function background() {
     return {
-        value:  new fields.StringField({ initial: ''}),
+        value:  new fields.HTMLField({ initial: ''}),
     }
   }

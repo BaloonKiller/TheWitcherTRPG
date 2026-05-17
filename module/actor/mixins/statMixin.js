@@ -1,23 +1,25 @@
 import { updateDerived, genId } from "../../scripts/witcher.js";
 import { extendedRoll } from "../../scripts/chat.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import { WitcherDialog, renderApplication } from "../../setup/foundry-compat.js";
+import { parseHpInputValue } from "../../scripts/deathSaves.mjs";
 
 export let statMixin = {
 
-  _onStatModifierDisplay(event) {
+  async _onStatModifierDisplay(event) {
     event.preventDefault();
     let stat = event.currentTarget.closest(".stat-display").dataset.stat;
 
     if (stat == "reputation") {
-      this.actor.update({ [`system.${stat}.isOpened`]: !this.actor.system[stat].isOpened });
+      await this.actor.update({ [`system.${stat}.isOpened`]: !this.actor.system[stat].isOpened });
     }
     else {
-      this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.isOpened`]: !this.actor.system[this.statMap[stat].origin][stat].isOpened });
+      await this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.isOpened`]: !this.actor.system[this.statMap[stat].origin][stat].isOpened });
     }
   },
 
-  _onDerivedModifierDisplay(event) {
-    this.actor.update({ 'system.derivedStats.modifiersIsOpened': !this.actor.system.derivedStats.modifiersIsOpened });
+  async _onDerivedModifierDisplay(event) {
+    await this.actor.update({ 'system.derivedStats.modifiersIsOpened': !this.actor.system.derivedStats.modifiersIsOpened });
   },
 
   async _onAddStatModifier(event) {
@@ -25,14 +27,14 @@ export let statMixin = {
     let stat = event.currentTarget.closest(".stat-display").dataset.stat;
 
     if (stat == "reputation") {
-      let newModifierList = this.actor.system.reputation.modifiers
+      let newModifierList = foundry.utils.deepClone(this.actor.system.reputation.modifiers ?? [])
       newModifierList.push({ id: genId(), name: "Modifier", value: 0 })
-      this.actor.update({ [`system.${stat}.modifiers`]: newModifierList });
+      await this.actor.update({ [`system.${stat}.modifiers`]: newModifierList });
     }
     else {
-      let newModifierList = this.actor.system[this.statMap[stat].origin][stat].modifiers;
+      let newModifierList = foundry.utils.deepClone(this.actor.system[this.statMap[stat].origin][stat].modifiers ?? []);
       newModifierList.push({ id: genId(), name: "Modifier", value: 0 })
-      this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: newModifierList });
+      await this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: newModifierList });
     }
   },
 
@@ -48,20 +50,21 @@ export let statMixin = {
     let modifiers = []
 
     if (stat == "reputation") {
-      modifiers = this.actor.system.reputation.modifiers
+      modifiers = foundry.utils.deepClone(this.actor.system.reputation.modifiers ?? [])
     }
     else {
-      modifiers = this.actor.system[this.statMap[stat].origin][stat].modifiers;
+      modifiers = foundry.utils.deepClone(this.actor.system[this.statMap[stat].origin][stat].modifiers ?? []);
     }
 
     let objIndex = modifiers.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     modifiers[objIndex][field] = value
 
     if (stat == "reputation") {
-      this.actor.update({ [`system.${stat}.modifiers`]: modifiers });
+      await this.actor.update({ [`system.${stat}.modifiers`]: modifiers });
     }
     else {
-      this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: modifiers });
+      await this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: modifiers });
     }
 
     updateDerived(this.actor);
@@ -83,13 +86,14 @@ export let statMixin = {
     }
     const newModList = Object.values(prevModList).map((details) => details);
     const idxToRm = newModList.findIndex((v) => v.id === event.target.dataset.id);
+    if (idxToRm < 0) return;
     newModList.splice(idxToRm, 1);
 
     if (stat == "reputation") {
-      this.actor.update({ [`system.${stat}.modifiers`]: newModList });
+      await this.actor.update({ [`system.${stat}.modifiers`]: newModList });
     }
     else {
-      this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: newModList });
+      await this.actor.update({ [`system.${this.statMap[stat].origin}.${stat}.modifiers`]: newModList });
     }
 
     updateDerived(this.actor);
@@ -125,7 +129,7 @@ export let statMixin = {
       dialogTemplate += `<label>${game.i18n.localize("WITCHER.Apply.Mod")}</label>`;
       this.actor.system.reputation.modifiers.forEach(mod => dialogTemplate += `<div><input id="${mod.name.replace(/\s/g, '')}" type="checkbox" unchecked/> ${mod.name}(${mod.value})</div>`)
     }
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: game.i18n.localize("WITCHER.ReputationTitle"),
       content: dialogTemplate,
       buttons: {
@@ -182,11 +186,24 @@ export let statMixin = {
           })
         }
       }
-    }).render(true);
+    }));
   },
 
   _onHPChanged(event) {
     updateDerived(this.actor)
+  },
+
+  async _onHPValueChanged(event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const hp = parseHpInputValue(event.currentTarget.value);
+    if (hp === null) {
+      event.currentTarget.value = this.actor.system.derivedStats.hp.value;
+      return;
+    }
+
+    await this.actor.update({ "system.derivedStats.hp.value": hp });
   },
 
   calc_total_stats(context) {
@@ -199,9 +216,8 @@ export let statMixin = {
 
 
   statListener(html) {
-    html.find("input.stat-max").on("change", updateDerived(this.actor));
-
-    html.find(".hp-value").change(this._onHPChanged.bind(this));
+    html.find("input.stat-max").on("change", this._onHPChanged.bind(this));
+    html.find('input[name="system.derivedStats.hp.value"]').on("change", this._onHPValueChanged.bind(this));
 
     html.find(".stat-roll").on("click", this._onStatSaveRoll.bind(this));
     html.find(".reputation-roll").on("click", this._onReputation.bind(this));

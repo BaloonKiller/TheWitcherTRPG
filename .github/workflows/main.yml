@@ -1,78 +1,75 @@
 name: System CI/CD
 
-on: 
+on:
   push:
     branches:
       - main
+      - dev
+  pull_request:
 
-jobs: 
+permissions:
+  contents: write
+
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    # Get the version from 'system.json'
-    - name: Get Version
-      shell: bash
-      id: get-version
-      run: echo "::set-output name=version::$(node ./.github/workflows/get-version.js)"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-    # Get the name from 'system.json'
-    - name: Get Includes
-      shell: bash
-      id: get-includes
-      run: echo "::set-output name=files::$(node ./.github/workflows/get-includes.js)"
+      - name: Install dependencies
+        run: npm ci
 
-    # create a zip file with all files required by the system to add to the release
-    - name: Zip Files
-      working-directory: ./
-      run: zip -r ./system.zip ${{steps.get-includes.outputs.files}}
+      - name: Validate system
+        run: npm test
 
-    #Useful only for the template so we can leave the manifest and download urls empty
-    - name: Substitute Manifest and Download Links For Versioned Ones
-      id: sub_manifest_link_latest
-      uses: microsoft/variable-substitution@v1
-      with:
-        files: './system.json'
-      env:
-        url: https://github.com/${{github.repository}}
-        manifest: https://github.com/${{github.repository}}/releases/latest/download/system.json
-        download: https://github.com/${{github.repository}}/releases/latest/download/system.zip
+      - name: Read system version
+        id: version
+        shell: bash
+        run: echo "version=$(node ./.github/workflows/get-version.js)" >> "$GITHUB_OUTPUT"
 
-    # Update the 'latest' release
-    - name: Update Latest Release
-      id: create_latest_release
-      uses: ncipollo/release-action@v1
-      if: endsWith(github.ref, 'main')
-      with:
-        allowUpdates: true
-        name: Latest
-        draft: false
-        prerelease: false
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: './system.json, ./system.zip'
-        tag: latest
+      - name: Set release manifest URLs
+        if: github.ref == 'refs/heads/main'
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: './system.json'
+        env:
+          url: https://github.com/${{ github.repository }}
+          manifest: https://github.com/${{ github.repository }}/releases/latest/download/system.json
+          download: https://github.com/${{ github.repository }}/releases/latest/download/system.zip
 
-    #Substitute the Manifest and Download URLs in the system.json
-    - name: Substitute Manifest and Download Links For Versioned Ones
-      id: sub_manifest_link_version
-      uses: microsoft/variable-substitution@v1
-      with:
-        files: './system.json'
-      env:
-        url: https://github.com/${{github.repository}}
-        manifest: https://github.com/${{github.repository}}/releases/latest/download/system.json
-        download: https://github.com/${{github.repository}}/releases/download/${{steps.get-version.outputs.version}}/system.zip
-    
-    # Create a release for this specific version
-    - name: Create Version Release
-      id: create_version_release
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true # set this to false if you want to prevent updating existing releases
-        name: Release ${{ steps.get-version.outputs.version }}
-        draft: false
-        prerelease: false
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: './system.json,./system.zip'
-        tag: ${{ steps.get-version.outputs.version }}
+      - name: Create system archive
+        if: github.ref == 'refs/heads/main'
+        run: zip -r system.zip assets lang module packs styles templates system.json README.md
+
+      - name: Update latest release
+        if: github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: './system.json,./system.zip'
+          artifactErrorsFailBuild: true
+          name: Latest
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create version release
+        if: github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: './system.json,./system.zip'
+          artifactErrorsFailBuild: true
+          name: Release ${{ steps.version.outputs.version }}
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: ${{ steps.version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}

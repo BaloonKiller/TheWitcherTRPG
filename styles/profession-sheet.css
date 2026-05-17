@@ -2,6 +2,35 @@
     height: 150px;
 }
 
+.profession-heading {
+    gap: 8px;
+    font-size: 28px;
+    line-height: 1.1;
+    margin: 4px 0 14px;
+}
+
+.profession-heading label {
+    flex: 0 0 auto;
+}
+
+.profession-heading > input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 36px;
+    font-size: 26px;
+}
+
+.profession-heading .item-edit,
+.profession-heading .item-delete {
+    align-items: center;
+    display: flex;
+    flex: 0 0 32px;
+    justify-content: center;
+    width: 32px;
+    margin: 0;
+    font-size: 24px;
+}
+
 .profession-card {
     min-width: 250px;
     max-width: 400px;

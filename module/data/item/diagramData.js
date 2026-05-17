@@ -1,5 +1,6 @@
 import CommonItemData from "./commonItemData.js";
 import craftingComponent from "./templates/craftingComponentData.js";
+import { fromUuidSync } from "../../setup/foundry-compat.js";
 
 const fields = foundry.data.fields;
 
@@ -19,6 +20,7 @@ export default class DiagramData extends CommonItemData {
         craftingTime: new fields.StringField({initial: ''}),
         investment: new fields.NumberField({initial: 0}),
         learned: new fields.BooleanField({initial: false}),
+        outputQuantity: new fields.NumberField({initial: 1}),
 
         craftingComponents: new fields.ArrayField(new fields.SchemaField(craftingComponent())),
         alchemyComponents: new fields.SchemaField({
@@ -42,16 +44,30 @@ export default class DiagramData extends CommonItemData {
   
       let itemUuid = this.associatedItemUuid;
       if(itemUuid) {
-          this.associatedItem = fromUuidSync(itemUuid);
+          this.associatedItem = fromUuidSync(itemUuid) ?? null;
       }
+      this.hasPhysicalCopy = Number(this.quantity) > 0 && !this.isStored;
+      this.canCraft = this.learned || this.hasPhysicalCopy;
     }
 
      /** @inheritdoc */
      static migrateData(source) {
-      super.migrateData(source);
+      const migrated = super.migrateData(source) ?? source;
 
-      if ("associatedItem" in source) {
-        source.associatedItemUuid = "Compendium.TheWitcherTRPG.gear.Item." + source.associatedItem._id;
+      if ("associatedItem" in migrated) {
+        migrated.associatedItemUuid = migrated.associatedItem?.uuid
+          ?? (migrated.associatedItem?._id ? "Compendium.thewitchertrpg.gear.Item." + migrated.associatedItem._id : "");
       }
+      migrated.craftingComponents = (migrated.craftingComponents ?? [])
+        .filter(component => component?.name || Number(component?.quantity) > 0)
+        .map(component => ({
+          ...component,
+          quantity: Number(component.quantity) > 0 ? Number(component.quantity) : 1,
+        }));
+      const legacyOutputQuantity = Number(migrated.associatedItem?.system?.quantity);
+      migrated.outputQuantity = Number(migrated.outputQuantity) > 0
+        ? Math.floor(Number(migrated.outputQuantity))
+        : (legacyOutputQuantity > 0 ? Math.floor(legacyOutputQuantity) : 1);
+      return migrated;
     }
   }

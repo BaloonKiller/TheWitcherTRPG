@@ -60,10 +60,10 @@
                 <td><b>{{localize "WITCHER.table.Quantity"}}</b></td>
                 <td><b>{{localize "WITCHER.table.Name"}}</b></td>
                 <td><b>{{localize "WITCHER.table.Equipped"}}</b></td>
-                <td><b>{{localize "WITCHER.table.StoppingPower"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResBludgeon"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResSlashing"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResPiercing"}}</b></td>
+                <td class="armor-sp-cell"><b>{{localize "WITCHER.table.StoppingPower"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResBludgeon"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResSlashing"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResPiercing"}}</b></td>
                 <td></td>
             </tr>
             {{#each armors as |armor id|}}
@@ -73,7 +73,7 @@
                         <a class="item-armor-display"><i class="fas fa-info"></i></a>
                     </td>
                     <td>
-                      {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=armor}}
+                      {{> "systems/thewitchertrpg/templates/partials/item-image.hbs" item=armor}}
                     </td>
                     <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
                                value="{{armor.system.quantity}}" data-dtype="Number"/></td>
@@ -84,7 +84,7 @@
                     {{/if}}
                     {{#unless (eq type "enhancement")}}
                         <td><input class="inline-edit" data-field="system.equipped" type="checkbox" value={{armor.system.equipped}} {{checked armor.system.equipped}}/></td>
-                        <td>
+                        <td class="armor-sp-cell">
                             {{#if (eq armor.system.location "Head")}}
                                 <div class="flex sp">
                                     <div class="icon-spacer"></div>
@@ -190,10 +190,10 @@
 
                         </td>
                     {{/unless}}
-                    <td><input type="checkbox" name="system.bludgeoning" {{checked armor.system.bludgeoning}} disabled/>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.bludgeoning" {{checked armor.system.bludgeoning}} disabled/>
                     </td>
-                    <td><input type="checkbox" name="system.slashing" {{checked armor.system.slashing}} disabled/></td>
-                    <td><input type="checkbox" name="system.Piercing" {{checked armor.system.piercing}} disabled/></td>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.slashing" {{checked armor.system.slashing}} disabled/></td>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.Piercing" {{checked armor.system.piercing}} disabled/></td>
 
                 </tr>
                 <tr class="item-info invisible">
@@ -299,7 +299,14 @@
                        value="{{system.quantity}}" placeholder="1d6"/></td>
             <td><input class="inline-edit" data-field="name" type="text" value="{{valuable.name}}" placeholder="name"/>
             </td>
-            <td><a class="item-delete"><i class="fas fa-trash-alt"></i></a></td>
+            <td>
+                {{#if (eq valuable.type "container")}}
+                    <a class="container-contents-open" title="{{localize 'WITCHER.Container.OpenContents'}}">
+                        <i class="fas fa-box-open" aria-hidden="true"></i>
+                    </a>
+                {{/if}}
+                <a class="item-delete"><i class="fas fa-trash-alt"></i></a>
+            </td>
         </tr>
     {{/each}}
 </table>

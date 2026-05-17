@@ -1,23 +1,18 @@
 
 import { genId } from "../../scripts/witcher.js";
+import { DragDrop, WitcherItemSheetV2, deepClone } from "../../setup/foundry-compat.js";
 
-export default class WitcherItemSheet extends ItemSheet {
+export default class WitcherItemSheet extends WitcherItemSheetV2 {
   /** @override */
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      classes: ["witcher", "sheet", "item"],
+  static DEFAULT_OPTIONS = {
+    position: {
       width: 520,
       height: 480,
-      tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
-      dragDrop: [{
-        dragSelector: ".items-list .item",
-        dropSelector: null
-      }],
-    });
-  }
+    },
+  };
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/${this.object.type}-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/${this.object.type}-sheet.hbs`;
   }
 
   /** @override */
@@ -25,13 +20,13 @@ export default class WitcherItemSheet extends ItemSheet {
     const data = super.getData();
     data.config = CONFIG.WITCHER;
 
-    this.options.classes.push(`item-${this.item.type}`)
     data.data = data.item?.system
     return data;
   }
 
   activateListeners(html) {
     super.activateListeners(html);
+    this.element.classList.add(`item-${this.item.type}`);
 
     html.find(".add-effect").on("click", this._onAddEffect.bind(this));
     html.find(".add-modifier-stat").on("click", this._onAddModifierStat.bind(this));
@@ -59,11 +54,7 @@ export default class WitcherItemSheet extends ItemSheet {
       let item = this.actor.items.get(itemId);
       ev.originalEvent.dataTransfer.setData(
         "text/plain",
-        JSON.stringify({
-          item: item,
-          actor: this.actor,
-          type: "itemDrop",
-        }),
+        JSON.stringify(item.toDragData()),
       )
     });
 
@@ -73,10 +64,11 @@ export default class WitcherItemSheet extends ItemSheet {
       permissions: { dragstart: this._canDragStart.bind(this), drop: this._canDragDrop.bind(this) },
       callbacks: { dragstart: this._onDragStart.bind(this), drop: this._onDrop.bind(this) }
     })
-    this._dragDrop.push(newDragDrop);
+    newDragDrop.bind(this.element);
+    this._witcherDragDrop = newDragDrop;
   }
 
-  _onEffectEdit(event) {
+  async _onEffectEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
@@ -84,27 +76,29 @@ export default class WitcherItemSheet extends ItemSheet {
     let field = element.dataset.field;
     let value = element.value
 
-    let effects = this.item.system.effects
+    let effects = deepClone(this.item.system.effects ?? [])
     let objIndex = effects.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     effects[objIndex][field] = value
 
-    this.item.update({ 'system.effects': effects });
+    await this.item.update({ 'system.effects': effects });
     
   }
 
-  _onModifierEdit(event) {
+  async _onModifierEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let field = element.dataset.field;
     let value = element.value
-    let effects = this.item.system.stats
+    let effects = deepClone(this.item.system.stats ?? [])
     let objIndex = effects.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     effects[objIndex][field] = value
-    this.item.update({ 'system.stats': effects });
+    await this.item.update({ 'system.stats': effects });
   }
 
-  _onDamageTypeEdit(event) {
+  async _onDamageTypeEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let newval = Object.assign({}, this.item.system.type)
@@ -115,93 +109,95 @@ export default class WitcherItemSheet extends ItemSheet {
     if (newval.bludgeoning) types.push(game.i18n.localize("WITCHER.Armor.bludgeoning"))
     if (newval.elemental) types.push(game.i18n.localize("WITCHER.Armor.elemental"))
     newval.text = types.join(", ")
-    this.item.update({ 'system.type': newval });
+    await this.item.update({ 'system.type': newval });
   }
 
-  _onModifierDerivedEdit(event) {
+  async _onModifierDerivedEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
 
     let field = element.dataset.field;
     let value = element.value
-    let effects = this.item.system.derived
+    let effects = deepClone(this.item.system.derived ?? [])
     let objIndex = effects.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     effects[objIndex][field] = value
-    this.item.update({ 'system.derived': effects });
+    await this.item.update({ 'system.derived': effects });
   }
 
-  _onModifierSkillsEdit(event) {
+  async _onModifierSkillsEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
 
     let field = element.dataset.field;
     let value = element.value
-    let effects = this.item.system.skills
+    let effects = deepClone(this.item.system.skills ?? [])
     let objIndex = effects.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     effects[objIndex][field] = value
-    this.item.update({ 'system.skills': effects });
+    await this.item.update({ 'system.skills': effects });
   }
 
-  _onRemoveComponent(event) {
+  async _onRemoveComponent(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let newComponentList = this.item.system.craftingComponents.filter(item => item.id !== itemId)
-    this.item.update({ 'system.craftingComponents': newComponentList });
+    await this.item.update({ 'system.craftingComponents': newComponentList });
   }
 
-  _oRemoveEffect(event) {
+  async _oRemoveEffect(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let newEffectList = this.item.system.effects.filter(item => item.id !== itemId)
-    this.item.update({ 'system.effects': newEffectList });
+    await this.item.update({ 'system.effects': newEffectList });
   }
 
-  _onRemoveModifierStat(event) {
+  async _onRemoveModifierStat(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let newModifierList = this.item.system.stats.filter(item => item.id !== itemId)
-    this.item.update({ 'system.stats': newModifierList });
+    await this.item.update({ 'system.stats': newModifierList });
   }
 
-  _onRemoveModifierSkill(event) {
+  async _onRemoveModifierSkill(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let newModifierList = this.item.system.skills.filter(item => item.id !== itemId)
-    this.item.update({ 'system.skills': newModifierList });
+    await this.item.update({ 'system.skills': newModifierList });
   }
 
-  _onRemoveModifierDerived(event) {
+  async _onRemoveModifierDerived(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
     let newModifierList = this.item.system.derived.filter(item => item.id !== itemId)
-    this.item.update({ 'system.derived': newModifierList });
+    await this.item.update({ 'system.derived': newModifierList });
   }
 
-  _onAddEffect(event) {
+  async _onAddEffect(event) {
     event.preventDefault();
     let newEffectList = []
     if (this.item.system.effects) {
-      newEffectList = this.item.system.effects
+      newEffectList = deepClone(this.item.system.effects)
     }
-    newEffectList.push({ id: genId(), name: "effect", percentage: "" })
-    this.item.update({ 'system.effects': newEffectList });
+    newEffectList.push({ id: genId(), name: "effect", percentage: "", durationRounds: 0 })
+    await this.item.update({ 'system.effects': newEffectList });
   }
 
-  _onAddComponent(event) {
+  async _onAddComponent(event) {
     event.preventDefault();
     let newComponentList = []
     if (this.item.system.craftingComponents) {
-      newComponentList = this.item.system.craftingComponents
+      newComponentList = deepClone(this.item.system.craftingComponents)
     }
     newComponentList.push({ id: genId(), name: "component", quantity: "" })
-    this.item.update({ 'system.craftingComponents': newComponentList });
+    await this.item.update({ 'system.craftingComponents': newComponentList });
   }
 
   async _onAddAssociatedItem(event) {
@@ -212,34 +208,34 @@ export default class WitcherItemSheet extends ItemSheet {
     event.preventDefault();
   }
 
-  _onAddModifierStat(event) {
+  async _onAddModifierStat(event) {
     event.preventDefault();
     let newModifierList = []
     if (this.item.system.stats) {
-      newModifierList = this.item.system.stats
+      newModifierList = deepClone(this.item.system.stats)
     }
     newModifierList.push({ id: genId(), stat: "none", modifier: 0 })
-    this.item.update({ 'system.stats': newModifierList });
+    await this.item.update({ 'system.stats': newModifierList });
   }
 
-  _onAddModifierSkill(event) {
+  async _onAddModifierSkill(event) {
     event.preventDefault();
     let newModifierList = []
     if (this.item.system.skills) {
-      newModifierList = this.item.system.skills
+      newModifierList = deepClone(this.item.system.skills)
     }
     newModifierList.push({ id: genId(), skill: "none", modifier: 0 })
-    this.item.update({ 'system.skills': newModifierList });
+    await this.item.update({ 'system.skills': newModifierList });
   }
 
-  _onAddModifierDerived(event) {
+  async _onAddModifierDerived(event) {
     event.preventDefault();
     let newModifierList = []
     if (this.item.system.derived) {
-      newModifierList = this.item.system.derived
+      newModifierList = deepClone(this.item.system.derived)
     }
     newModifierList.push({ id: genId(), derivedStat: "none", modifier: 0 })
-    this.item.update({ 'system.derived': newModifierList });
+    await this.item.update({ 'system.derived': newModifierList });
   }
 
   _onFocusIn(event) {

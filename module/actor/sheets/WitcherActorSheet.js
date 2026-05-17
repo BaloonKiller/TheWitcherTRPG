@@ -1,7 +1,12 @@
 import { extendedRoll } from "../../scripts/chat.js";
+import * as VerbalCombat from "../../scripts/verbalCombat.js";
 import { WITCHER } from "../../setup/config.js";
-import { calc_currency_weight, addModifiers } from "../../scripts/witcher.js";
+import { addModifiers, calc_currency_weight, calculateInventoryCost, calculateInventoryWeight } from "../../scripts/witcher.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import { openCurrencyLedger } from "../../scripts/currencyLedger.js";
+import { advanceCriticalWoundHealing, getCriticalWoundTier } from "../../scripts/criticalWoundHealing.mjs";
+import { findOrphanedStoredItems, findUnmarkedStoredItems } from "../../scripts/storedItems.mjs";
+import { migrateLegacyContainerItems } from "../../scripts/containerStorage.mjs";
 
 import { ExecuteDefence } from "../../scripts/actions.js";
 import { sanitizeMixin } from "../mixins/sanitizeMixin.js"
@@ -13,58 +18,38 @@ import { skillModifierMixin } from "../mixins/skillModifierMixin.js";
 import { skillMixin } from "../mixins/skillMixin.js";
 import { statMixin } from "../mixins/statMixin.js";
 import { itemMixin } from "../mixins/itemMixin.js";
+import { WitcherActorSheetV2, WitcherDialog, renderApplication, renderTemplate, sanitizeSheetRenderOptions } from "../../setup/foundry-compat.js";
 
-Array.prototype.sum = function (prop) {
-  var total = 0
-  for (var i = 0; i < this.length; i++) {
-    if (this[i].system[prop]) {
-      total += Number(this[i].system[prop])
-    }
-    else if (this[i].system?.system[prop]) {
-      total += Number(this[i].system?.system[prop])
-    }
-  }
-  return total
-}
-Array.prototype.weight = function () {
-  var total = 0
-  for (var i = 0, _len = this.length; i < _len; i++) {
-    if (this[i].system.weight && this[i].system.quantity && !this[i].system.isStored) {
-      total += Number(this[i].system.quantity) * Number(this[i].system.weight)
-    }
-  }
-  return Math.ceil(total)
-}
-Array.prototype.cost = function () {
-  var total = 0
-  for (var i = 0, _len = this.length; i < _len; i++) {
-    if (this[i].system.cost && this[i].system.quantity) {
-      total += Number(this[i].system.quantity) * Number(this[i].system.cost)
-    }
-  }
-  return Math.ceil(total)
-}
-
-export default class WitcherActorSheet extends ActorSheet {
+export default class WitcherActorSheet extends WitcherActorSheetV2 {
 
   statMap = WITCHER.statMap;
   skillMap = WITCHER.skillMap;
+
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
 
   /** @override */
   getData() {
     const context = super.getData();
 
-    context.useAdrenaline = game.settings.get("TheWitcherTRPG", "useOptionalAdrenaline")
-    context.displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
-    context.useVerbalCombat = game.settings.get("TheWitcherTRPG", "useOptionalVerbalCombat")
-    context.displayRep = game.settings.get("TheWitcherTRPG", "displayRep")
+    context.useAdrenaline = game.settings.get("thewitchertrpg", "useOptionalAdrenaline")
+    context.displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
+    context.useVerbalCombat = game.settings.get("thewitchertrpg", "useOptionalVerbalCombat")
+    context.displayRep = game.settings.get("thewitchertrpg", "displayRep")
 
     context.config = CONFIG.WITCHER;
     CONFIG.Combat.initiative.formula = "1d10 + @stats.ref.current" + (context.displayRollDetails ? "[REF]" : "");
 
     const actorData = this.actor.toObject(false);
     context.system = actorData.system;
-    context.items = context.actor.items.filter(i => !i.system.isStored);
+    context.system.critWounds = Object.values(context.system.critWounds ?? {}).map(wound => ({
+      ...wound,
+      isPermanent: getCriticalWoundTier(wound.effect) === "Deadly",
+    }));
+    context.isDeathSave = Number(context.system?.derivedStats?.hp?.value) <= 0;
+    const orphanedStoredItems = new Set(findOrphanedStoredItems(context.actor.items));
+    context.items = context.actor.items.filter(i => !i.system.isStored || orphanedStoredItems.has(i));
 
     this._prepareGeneralInformation(context);
     this._prepareWeapons(context);
@@ -112,27 +97,18 @@ export default class WitcherActorSheet extends ActorSheet {
     context.glyphItems = context.enhancements.filter(e => e.system.type == "glyph");
     context.containers = items.filter(i => i.type == "container");
 
-    context.totalWeight = context.items.weight() + calc_currency_weight(context.actor.system.currency);
-    context.totalCost = context.items.cost();
+    context.totalWeight = calculateInventoryWeight(context.actor.items) + calc_currency_weight(context.actor.system.currency);
+    context.totalCost = calculateInventoryCost(context.actor.items);
   }
 
   _prepareWeapons(context) {
     context.weapons = context.actor.getList("weapon");
     context.weapons.forEach((weapon) => {
-      if (weapon.system.enhancements > 0 && weapon.system.enhancements != weapon.system.enhancementItemIds.length) {
-        let newEnhancementList = []
-        let enhancementItems = weapon.system.enhancementItems ?? []
-        for (let i = 0; i < weapon.system.enhancements; i++) {
-          let element = enhancementItems[i]
-          if (element) {
-            newEnhancementList.push(element)
-          } else {
-            newEnhancementList.push({})
-          }
-        }
-        let item = context.actor.items.get(weapon._id);
-        item.system.enhancementItems = newEnhancementList
-      }
+      const enhancementItems = weapon.system.enhancementItems ?? []
+      weapon.system.enhancementItems = Array.from(
+        { length: Math.max(0, Number(weapon.system.enhancements) || 0) },
+        (_, index) => enhancementItems[index] ?? {}
+      )
     });
   }
 
@@ -143,20 +119,11 @@ export default class WitcherActorSheet extends ActorSheet {
     });
 
     context.armors.forEach((armor) => {
-      if (armor.system.enhancements > 0 && armor.system.enhancements != armor.system.enhancementItemIds.length) {
-        let newEnhancementList = []
-        let enhancementItems = armor.system.enhancementItems ?? []
-        for (let i = 0; i < armor.system.enhancements; i++) {
-          let element = enhancementItems[i]
-          if (element && JSON.stringify(element) != '{}') {
-            newEnhancementList.push(element)
-          } else {
-            newEnhancementList.push({})
-          }
-        }
-        let item = context.actor.items.get(armor._id);
-        item.system.enhancementItems = newEnhancementList
-      }
+      const enhancementItems = armor.system.enhancementItems ?? []
+      armor.system.enhancementItems = Array.from(
+        { length: Math.max(0, Number(armor.system.enhancements) || 0) },
+        (_, index) => enhancementItems[index] ?? {}
+      )
     });
 
   }
@@ -164,13 +131,29 @@ export default class WitcherActorSheet extends ActorSheet {
   activateListeners(html) {
     super.activateListeners(html);
 
+    if (this.actor.isOwner) {
+      migrateLegacyContainerItems(this.actor).catch(error => {
+        console.warn("TheWitcherTRPG | Could not migrate legacy container Items.", error);
+      });
+      Promise.all([
+        ...findOrphanedStoredItems(this.actor.items).map(item => (
+          item.update({ "system.isStored": false })
+        )),
+        ...findUnmarkedStoredItems(this.actor.items).map(item => (
+          item.update({ "system.isStored": true })
+        )),
+      ]).catch(error => {
+        console.warn("TheWitcherTRPG | Could not restore orphaned stored Items.", error);
+      });
+    }
+
     html.find(".life-event-display").on("click", this._onLifeEventDisplay.bind(this));
 
     html.find(".init-roll").on("click", this._onInitRoll.bind(this));
-    html.find(".crit-roll").on("click", this._onCritRoll.bind(this));
     html.find(".defence-roll").on("click", this._onDefenceRoll.bind(this));
     html.find(".heal-button").on("click", this._onHeal.bind(this));
     html.find(".verbal-button").on("click", this._onVerbalCombat.bind(this));
+    html.find(".currency-ledger-open").on("click", this._onCurrencyLedgerOpen.bind(this));
 
     html.find("input").focusin(ev => this._onFocusIn(ev));
 
@@ -205,16 +188,8 @@ export default class WitcherActorSheet extends ActorSheet {
     this.actor.rollInitiative({ createCombatants: true, rerollInitiative: true })
   }
 
-  async _onCritRoll(event) {
-    let rollResult = await new Roll("1d10x10").evaluate({ async: true })
-    let messageData = {
-      speaker: ChatMessage.getSpeaker({ actor: this.actor })
-    }
-    rollResult.toMessage(messageData)
-  }
-
   async _onDefenceRoll(event) {
-    ExecuteDefence(this.actor)
+    return ExecuteDefence(this.actor)
   }
 
   async _onHeal() {
@@ -230,7 +205,7 @@ export default class WitcherActorSheet extends ActorSheet {
             <div><input id="HT" type="checkbox" unchecked/> ${game.i18n.localize("WITCHER.Heal.healingTent")}</div>
         </div>
       </div>`;
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: game.i18n.localize("WITCHER.Heal.dialogTitle"),
       content: dialogTemplate,
       buttons: {
@@ -249,141 +224,137 @@ export default class WitcherActorSheet extends ActorSheet {
             let maxHealth = actor.system.derivedStats.hp.max;
             //Calculate healed amount
             if (rested) {
-              console.log("Spent Day Resting");
               total_rec += rec;
             }
             else {
-              console.log("Spent Day Active");
               total_rec += Math.floor(rec / 2);
             }
             if (sterFluid) {
-              console.log("Add Sterilising Fluid Bonus");
               total_rec += 2;
             }
             if (healHand) {
-              console.log("Add Healing Hands Bonus");
               total_rec += 3;
             }
             if (healTent) {
-              console.log("Add Healing Tent Bonus");
               total_rec += 2;
             }
             //Update actor health
             await actor.update({ "system.derivedStats.hp.value": Math.min(curHealth + total_rec, maxHealth) })
-            setTimeout(() => {
-              let newSTA = actor.system.derivedStats.sta.max;
-              //Delay stamina refill to allow actor sheet to update max STA value if previously Seriously Wounded or in Death State, otherwise it would refill to the weakened max STA value
-              actor.update({ "system.derivedStats.sta.value": newSTA });
-            }, 400);
+            await actor.update({ "system.derivedStats.sta.value": actor.system.derivedStats.sta.max });
 
             ui.notifications.info(`${actor.name} ${game.i18n.localize("WITCHER.Heal.recovered")} ${rested ? game.i18n.localize("WITCHER.Heal.restful") : game.i18n.localize("WITCHER.Heal.active")} ${game.i18n.localize("WITCHER.Heal.day")}`)
 
-            //Remove add one day for each Crit wound and removes it if equals to max days.
-            const critList = Object.values(this.actor.system.critWounds).map((details) => details);
-            let newCritList = []
-            critList.forEach(crit => {
-              crit.daysHealed += 1
-              if (crit.healingTime <= 0 || crit.daysHealed < crit.healingTime) {
-                newCritList.push(crit)
-              }
-            });
-            this.actor.update({ "system.critWounds": newCritList });
+            const criticalHealing = advanceCriticalWoundHealing(
+              this.actor.system.critWounds,
+              this.actor.system.stats.body.max,
+            );
+            await this.actor.update({ "system.critWounds": criticalHealing.wounds });
           }
         },
         t2: {
           label: `${game.i18n.localize("WITCHER.Button.Cancel")}`,
         }
       },
-    }).render(true);
+    }));
   }
 
   async _onVerbalCombat() {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
-    const dialogTemplate = await renderTemplate("systems/TheWitcherTRPG/templates/sheets/verbal-combat.hbs");
-    new Dialog({
+    const dialogTemplate = await renderTemplate("systems/thewitchertrpg/templates/sheets/verbal-combat.hbs");
+    renderApplication(new WitcherDialog({
       title: game.i18n.localize("WITCHER.verbalCombat.DialogTitle"),
       content: dialogTemplate,
       buttons: {
         t1: {
-          label: "Roll",
+          label: game.i18n.localize("WITCHER.Dialog.ButtonRoll"),
           callback: async (html) => {
-            let verbal = document.querySelector('input[name="verbalCombat"]:checked').value;
-
-            let verbalCombat = WITCHER.verbalCombat[verbal]
-            let vcName = verbalCombat.name;
-
-            let vcStatName = verbalCombat.skill?.attribute.label ?? "WITCHER.Context.unavailable";
-            let vcStat = verbalCombat.skill ? this.actor.system.stats[verbalCombat.skill.attribute.name]?.current : 0;
-
-            let vcSkillName = verbalCombat.skill?.label ?? "WITCHER.Context.unavailable";
-            let vcSkill = verbalCombat.skill ? this.actor.system.skills[verbalCombat.skill.attribute.name][verbalCombat.skill.name]?.value : 0
-            let modifiers = verbalCombat.skill ? this.actor.system.skills[verbalCombat.skill.attribute.name][verbalCombat.skill.name].modifiers : null;
-
-            let vcDmg = verbalCombat.baseDmg ? `${verbalCombat.baseDmg}+${this.actor.system.stats[verbalCombat.dmgStat.name].current}[${game.i18n.localize(verbalCombat.dmgStat?.label)}]` : game.i18n.localize("WITCHER.verbalCombat.None")
-            if (verbal == "Counterargue") {
-              vcDmg = `${game.i18n.localize("WITCHER.verbalCombat.CounterargueDmg")}`
+            const verbal = html.find('input[name="verbalCombat"]:checked').val();
+            if (!verbal) {
+              return ui.notifications.warn(game.i18n.localize("WITCHER.Chat.VerbalSelectAction"));
+            }
+            if (verbal === "Counterargue") {
+              return ui.notifications.info(game.i18n.localize("WITCHER.Chat.VerbalCounterargueFromAttack"));
             }
 
-            let effect = verbalCombat.effect
-
-            let rollFormula = !displayRollDetails ? `1d10+${vcStat}+${vcSkill}` : `1d10+${vcStat}[${game.i18n.localize(vcStatName)}]+${vcSkill}[${game.i18n.localize(vcSkillName)}]`
-
-            rollFormula = addModifiers(modifiers, rollFormula)
-
-            let customAtt = html.find("[name=customModifiers]")[0].value;
-            if (customAtt < 0) {
-              rollFormula += !displayRollDetails ? `${customAtt}` : `${customAtt}[${game.i18n.localize("WITCHER.Settings.Custom")}]`
-            }
-            if (customAtt > 0) {
-              rollFormula += !displayRollDetails ? `+${customAtt}` : `+${customAtt}[${game.i18n.localize("WITCHER.Settings.Custom")}]`
+            const customModifier = html.find("[name=customModifiers]").val();
+            const customDamageModifier = html.find("[name=customDamageModifiers]").val();
+            const rollData = VerbalCombat.buildVerbalRollData(
+              this.actor,
+              verbal,
+              customModifier,
+              customDamageModifier
+            );
+            if (!rollData) {
+              return ui.notifications.error(game.i18n.localize("WITCHER.Chat.VerbalResolutionUnavailable"));
             }
 
-            let messageData = {
+            const { action: verbalCombat, actionType, damageFormula, formula: rollFormula } = rollData;
+            const vcDmg = damageFormula ?? game.i18n.localize("WITCHER.verbalCombat.None");
+            const isAttack = actionType === "attack";
+            const actionButtons = isAttack ? `
+              <div class="verbalcombat-action-buttons">
+                <button type="button" class="vc-defence">
+                  <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                  <span>${game.i18n.localize("WITCHER.Chat.VerbalDefend")}</span>
+                </button>
+                <button type="button" class="vcDamage secondary">
+                  <i class="fas fa-dice-d6" aria-hidden="true"></i>
+                  <span>${game.i18n.localize("WITCHER.Chat.VerbalRollDamageOnly")}</span>
+                </button>
+              </div>` : damageFormula ? `
+              <div class="verbalcombat-action-buttons">
+                <button type="button" class="vcDamage secondary">
+                  <i class="fas fa-dice-d6" aria-hidden="true"></i>
+                  <span>${game.i18n.localize("WITCHER.Chat.VerbalRollDamageOnly")}</span>
+                </button>
+              </div>` : "";
+
+            const messageData = {
               speaker: ChatMessage.getSpeaker({ actor: this.actor })
             }
             messageData.flavor = `
-              <h2>${game.i18n.localize("WITCHER.verbalCombat.Title")}: ${game.i18n.localize(vcName)}</h2>
-              <b>${game.i18n.localize("WITCHER.Weapon.Damage")}</b>: ${vcDmg} <br />
-              ${game.i18n.localize(effect)}
-              <hr />`
-            messageData.flavor += vcDmg.includes("d") ? `<button class="vcDamage" > ${game.i18n.localize("WITCHER.table.Damage")}</button>` : ''
+              <div class="verbalcombat-action-message ${isAttack ? "verbalcombat-attack-message" : ""}">
+                <h2>${game.i18n.localize("WITCHER.verbalCombat.Title")}: ${game.i18n.localize(verbalCombat.name)}</h2>
+                <div class="verbalcombat-action-damage">
+                  <span>${game.i18n.localize("WITCHER.Weapon.Damage")}</span>
+                  <strong>${vcDmg}</strong>
+                </div>
+                <p>${game.i18n.localize(verbalCombat.effect)}</p>
+                ${actionButtons}
+              </div>`;
 
-            let config = new RollConfig()
-            config.showCrit = true
-            await extendedRoll(rollFormula, messageData, config, this.createVerbalCombatFlags(verbalCombat, vcDmg))
+            const config = new RollConfig();
+            config.showCrit = true;
+            await extendedRoll(
+              rollFormula,
+              messageData,
+              config,
+              VerbalCombat.createVerbalActionFlags(this.actor, verbal, damageFormula)
+            );
           }
         },
         t2: {
           label: `${game.i18n.localize("WITCHER.Button.Cancel")}`,
         }
       },
-    }).render(true);
-  }
-
-  createVerbalCombatFlags(verbalCombat, vcDamage) {
-    return [
-      {
-        key: 'verbalCombat',
-        value: verbalCombat
-      },
-      {
-        key: 'damage',
-        value: {
-          formula: vcDamage
-        }
-      },
-    ]
+    }, {
+      width: 480,
+    }));
   }
 
   _onFocusIn(event) {
     event.currentTarget.select();
   }
 
+  async _onCurrencyLedgerOpen(event) {
+    event.preventDefault();
+    await openCurrencyLedger(this.actor, event.currentTarget.dataset.currency);
+  }
 
-  _onLifeEventDisplay(event) {
+
+  async _onLifeEventDisplay(event) {
     event.preventDefault();
     let section = event.currentTarget.closest(".lifeEvents");
-    this.actor.update({ [`system.general.lifeEvents.${section.dataset.event}.isOpened`]: !this.actor.system.general.lifeEvents[section.dataset.event].isOpened });
+    await this.actor.update({ [`system.general.lifeEvents.${section.dataset.event}.isOpened`]: !this.actor.system.general.lifeEvents[section.dataset.event].isOpened });
   }
 }
 

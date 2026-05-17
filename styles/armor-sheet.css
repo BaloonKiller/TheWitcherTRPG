@@ -22,3 +22,21 @@
 .icon-spacer {
     width: 10px;
 }
+
+.armor-table .armor-sp-cell,
+.armor-table .armor-resistance-cell {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.armor-table .armor-resistance-cell {
+    width: 34px;
+    padding-right: 2px;
+    padding-left: 2px;
+}
+
+.armor-table .armor-resistance-cell input[type="checkbox"] {
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+}

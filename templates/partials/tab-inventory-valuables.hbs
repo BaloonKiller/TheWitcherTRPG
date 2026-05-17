@@ -11,22 +11,37 @@
         <tr>
             <td>
                 <a class="item-armor-display"><i class="fas fa-info"></i></a>
+                {{#if (eq valuable.type "container")}}
+                    <a class="container-contents-open" title="{{localize 'WITCHER.Container.OpenContents'}}">
+                        <i class="fas fa-box-open" aria-hidden="true"></i>
+                    </a>
+                {{/if}}
             </td>
             <td>
                 <img src="{{valuable.img}}" class="item-img dragable" draggable="true"
                         data-id="{{valuable._id}}"/>
             </td>
             <td>
-                <input class="inline-edit item-quantity" data-field="system.quantity" type="text"
-                        value="{{valuable.system.quantity}}" data-dtype="Number"/>
+                {{#if (eq valuable.type "container")}}
+                    <span>1</span>
+                {{else}}
+                    <input class="inline-edit item-quantity" data-field="system.quantity" type="text"
+                            value="{{valuable.system.quantity}}" data-dtype="Number"/>
+                {{/if}}
             </td>
             <td>
                 <input class="inline-edit" data-field="name" type="text" value="{{valuable.name}}"
                         placeholder="name"/>
             </td>
             <td>
-                <input class="inline-edit weight-data" data-field="system.weight" type="text"
-                        value="{{valuable.system.weight}}" data-dtype="Number"/>
+                {{#if (eq valuable.type "container")}}
+                    <span class="weight-data" title="{{localize 'WITCHER.Container.TotalWeight'}}">
+                        <strong>{{valuable.system.containerTotalWeight}} kg</strong>
+                    </span>
+                {{else}}
+                    <input class="inline-edit weight-data" data-field="system.weight" type="text"
+                            value="{{valuable.system.weight}}" data-dtype="Number"/>
+                {{/if}}
             </td>
         </tr>
         <tr class="item-info invisible">

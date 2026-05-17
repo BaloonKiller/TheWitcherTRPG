@@ -662,6 +662,9 @@ WITCHER.statusEffects = [
         id: 'fire',
         label: 'WITCHER.statusEffects.fire',
         icon: 'icons/svg/fire.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.fire',
+        },
     },
     {
         id: 'stun',
@@ -672,6 +675,9 @@ WITCHER.statusEffects = [
         id: 'poison',
         label: 'WITCHER.statusEffects.poison',
         icon: 'icons/svg/poison.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.poison',
+        },
     },
     {
         id: 'prone',
@@ -682,21 +688,59 @@ WITCHER.statusEffects = [
         id: 'bleed',
         label: 'WITCHER.statusEffects.bleed',
         icon: 'icons/svg/blood.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.bleed',
+        },
     },
     {
         id: 'freeze',
         label: 'WITCHER.statusEffects.freeze',
         icon: 'icons/svg/frozen.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.freeze',
+            stats: [
+                { stat: 'WITCHER.Actor.Stat.Ref', modifier: '-1' },
+                { stat: 'WITCHER.Actor.Stat.Spd', modifier: '-3' },
+            ],
+        },
     },
     {
         id: 'staggered',
         label: 'WITCHER.statusEffects.staggered',
         icon: 'icons/svg/sword.svg',
+        ongoingEffect: {
+            durationRounds: 1,
+        },
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.staggered',
+            skills: [
+                { skill: 'WITCHER.SkRefBrawling', modifier: '-2' },
+                { skill: 'WITCHER.SkRefDodge', modifier: '-2' },
+                { skill: 'WITCHER.SkRefMelee', modifier: '-2' },
+                { skill: 'WITCHER.SkRefSmall', modifier: '-2' },
+                { skill: 'WITCHER.SkRefStaff', modifier: '-2' },
+                { skill: 'WITCHER.SkRefSwordsmanship', modifier: '-2' },
+                { skill: 'WITCHER.SkDexAthletics', modifier: '-2' },
+                { skill: 'WITCHER.SkDexArchery', modifier: '-2' },
+                { skill: 'WITCHER.SkDexCrossbow', modifier: '-2' },
+                { skill: 'WITCHER.SkWillHexLable', modifier: '-2' },
+                { skill: 'WITCHER.SkWillSpellcastLable', modifier: '-2' },
+                { skill: 'WITCHER.SkWillResistMagLable', modifier: '-2' },
+            ],
+        },
     },
     {
         id: 'intoxication',
         label: 'WITCHER.statusEffects.intoxication',
         icon: 'icons/svg/tankard.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.intoxication',
+            stats: [
+                { stat: 'WITCHER.Actor.Stat.Int', modifier: '-2' },
+                { stat: 'WITCHER.Actor.Stat.Ref', modifier: '-2' },
+                { stat: 'WITCHER.Actor.Stat.Dex', modifier: '-2' },
+            ],
+        },
     },
     {
         id: 'hallucination',
@@ -712,11 +756,31 @@ WITCHER.statusEffects = [
         id: 'suffocation',
         label: 'WITCHER.statusEffects.suffocation',
         icon: 'icons/svg/silenced.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.suffocation',
+        },
     },
     {
         id: 'blinded',
         label: 'WITCHER.statusEffects.blinded',
         icon: 'icons/svg/blind.svg',
+        systemEffect: {
+            description: 'WITCHER.statusEffectDescriptions.blinded',
+            skills: [
+                { skill: 'WITCHER.SkIntAwareness', modifier: '-5' },
+                { skill: 'WITCHER.SkRefBrawling', modifier: '-3' },
+                { skill: 'WITCHER.SkRefDodge', modifier: '-3' },
+                { skill: 'WITCHER.SkRefMelee', modifier: '-3' },
+                { skill: 'WITCHER.SkRefSmall', modifier: '-3' },
+                { skill: 'WITCHER.SkRefStaff', modifier: '-3' },
+                { skill: 'WITCHER.SkRefSwordsmanship', modifier: '-3' },
+                { skill: 'WITCHER.SkDexAthletics', modifier: '-3' },
+                { skill: 'WITCHER.SkDexArchery', modifier: '-3' },
+                { skill: 'WITCHER.SkDexCrossbow', modifier: '-3' },
+                { skill: 'WITCHER.SkWillSpellcastLable', modifier: '-3' },
+                { skill: 'WITCHER.SkWillResistMagLable', modifier: '-3' },
+            ],
+        },
     },
     {
         id: 'shielded',
@@ -761,14 +825,24 @@ WITCHER.statusEffects = [
     {
         id: 'reducedVision',
         label: 'WITCHER.statusEffects.reducedVision',
-        icon: 'systems/TheWitcherTRPG/assets/images/statusEffects/visored-helm.svg',
+        icon: 'systems/thewitchertrpg/assets/images/statusEffects/visored-helm.svg',
     },
     {
         id: 'holdAction',
         label: 'WITCHER.statusEffects.holdAction',
-        icon: 'systems/TheWitcherTRPG/assets/images/statusEffects/uncertainty.svg',
+        icon: 'systems/thewitchertrpg/assets/images/statusEffects/uncertainty.svg',
     },
 ]
+
+WITCHER.statusEffects = WITCHER.statusEffects.map((effect, index) => ({
+    ...effect,
+    name: effect.name ?? effect.label,
+    img: effect.img ?? effect.icon,
+    hud: effect.hud ?? true,
+    order: effect.order ?? index,
+}));
+
+WITCHER.statusEffectsById = Object.fromEntries(WITCHER.statusEffects.map(effect => [effect.id, effect]));
 
 WITCHER.armorEffects = [
     {

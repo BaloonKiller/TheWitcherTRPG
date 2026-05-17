@@ -1,5 +1,5 @@
 <form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
     <table class="item-table">
         <tr>
             <th title="{{localize "WITCHER.Spell.Variable"}}">{{localize "WITCHER.Spell.Short.Variable"}}</th>
@@ -107,6 +107,8 @@
                 {{/if}}
                 {{#if (eq item.system.causeDamages true)}}
                     <th>{{localize "WITCHER.Weapon.Short.Damage"}}</th>
+                    <th>{{localize "WITCHER.Dialog.damageType"}}</th>
+                    <th>{{localize "WITCHER.Spell.IgnoreArmor"}}</th>
                 {{/if}}
                 {{#if (eq item.system.createsShield true)}}
                     <th>{{localize "WITCHER.Spell.Short.Shield"}}</th>
@@ -141,6 +143,20 @@
                         <input class="medium" name="system.damage" type="text"
                                value="{{#unless item.system.damage}}1d6+0{{else}}{{item.system.damage}}{{/unless}}"/>
                     </td>
+                    <td>
+                        <select name="system.damageType">
+                            {{#select item.system.damageType}}
+                                <option value=""></option>
+                                <option value="bludgeoning">{{localize "WITCHER.Enhancement.Bludgeoning"}}</option>
+                                <option value="slashing">{{localize "WITCHER.Enhancement.Slashing"}}</option>
+                                <option value="piercing">{{localize "WITCHER.Enhancement.Piercing"}}</option>
+                                <option value="elemental">{{localize "WITCHER.Enhancement.Elemental"}}</option>
+                            {{/select}}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="system.ignoreArmor" {{checked item.system.ignoreArmor}}/>
+                    </td>
                 {{/if}}
                 {{#if (eq item.system.createsShield true)}}
                     <td>
@@ -163,7 +179,9 @@
                 <th><a class="add-effect" title="{{localize "WITCHER.Item.AddEffect"}}"><i class="fas fa-plus"></i></a>
                 </th>
                 <th>{{localize "WITCHER.Item.Effect"}}</th>
+                <th>{{localize "WITCHER.Item.statusEffect"}}</th>
                 <th>{{localize "WITCHER.Percentage"}}</th>
+                <th>{{localize "WITCHER.Effect.DurationRounds"}}</th>
             </tr>
             {{#each item.system.effects as |effect name|}}
                 <tr>
@@ -176,8 +194,17 @@
                                data-field="name" type="text" value="{{effect.name}}"/>
                     </td>
                     <td class="list-item" data-id="{{effect.id}}">
-                        <input class="list-edit" placeholder="%" data-field="percentage" type="text"
+                        <select class="list-edit item-effect" data-field="statusEffect">
+                            {{selectOptions ../config.statusEffects blank='' selected=effect.statusEffect nameAttr='id' valueAttr="id" labelAttr="label" localize=true}}
+                        </select>
+                    </td>
+                    <td class="list-item" data-id="{{effect.id}}">
+                        <input class="list-edit" placeholder="%" data-field="percentage" type="number" min="0" max="100"
                                value="{{effect.percentage}}" data-dtype="Number"/>
+                    </td>
+                    <td class="list-item" data-id="{{effect.id}}">
+                        <input class="list-edit" data-field="durationRounds" type="number" min="0"
+                               value="{{effect.durationRounds}}" data-dtype="Number"/>
                     </td>
                 </tr>
             {{/each}}

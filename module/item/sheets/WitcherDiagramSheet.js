@@ -1,11 +1,12 @@
 
 import { genId } from "../../scripts/witcher.js";
+import { TextEditor, deepClone, fromUuid } from "../../setup/foundry-compat.js";
 import WitcherItemSheet from "./WitcherItemSheet.js";
 
 export default class WitcherDiagramSheet extends WitcherItemSheet {
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/diagrams-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/diagrams-sheet.hbs`;
   }
 
   /** @override */
@@ -15,24 +16,21 @@ export default class WitcherDiagramSheet extends WitcherItemSheet {
   }
 
   async _onDrop(event) {
-    let dragEventData = TextEditor.getDragEventData(event)
-    let item = await fromUuid(dragEventData.uuid)
+    const dragEventData = TextEditor.getDragEventData(event)
+    const item = await fromUuid(dragEventData.uuid)
 
     if (item) {
-      if (event.target.offsetParent.dataset.type == "associatedItem") {
-        this.item.update({ 'system.associatedItemId': item.uuid });
+      if (event.target.closest?.('[data-type="associatedItem"]')) {
+        await this.item.update({ 'system.associatedItemUuid': item.uuid });
       } else {
-        let newComponentList = []
-        if (this.item.system.craftingComponents) {
-          newComponentList = this.item.system.craftingComponents
-        }
+        const newComponentList = deepClone(this.item.system.craftingComponents ?? [])
         newComponentList.push({ id: genId(), name: item.name, quantity: 1 })
-        this.item.update({ 'system.craftingComponents': newComponentList });
+        await this.item.update({ 'system.craftingComponents': newComponentList });
       }
     }
   }
 
-  _onEffectEdit(event) {
+  async _onEffectEdit(event) {
     event.preventDefault();
     let element = event.currentTarget;
     let itemId = element.closest(".list-item").dataset.id;
@@ -40,16 +38,21 @@ export default class WitcherDiagramSheet extends WitcherItemSheet {
     let field = element.dataset.field;
     let value = element.value
     
-    let components = this.item.system.craftingComponents
+    let components = deepClone(this.item.system.craftingComponents)
     let objIndex = components.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     components[objIndex][field] = value
-    this.item.update({ 'system.craftingComponents': components });
+    await this.item.update({ 'system.craftingComponents': components });
+  }
+
+  async _onAddAssociatedItem(event) {
+    event.preventDefault();
+    ui.notifications.info(game.i18n.localize("WITCHER.craft.DropAssociatedItem"));
   }
 
   async _onRemoveAssociatedItem(event) {
     event.preventDefault();
-    let newAssociatedItem = { id: "", name: "", img: "" };
-    this.item.update({ 'system.associatedItem': newAssociatedItem });
+    await this.item.update({ 'system.associatedItemUuid': "" });
   }
 
 }

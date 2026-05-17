@@ -1,17 +1,28 @@
 import { buttonDialog } from "../../scripts/chat.js";
-import { calc_currency_weight } from "../../scripts/witcher.js";
+import { applyCurrencyLedgerChange, depositCurrencyItem, openCurrencyLedger } from "../../scripts/currencyLedger.js";
+import { calc_currency_weight, calculateInventoryCost, calculateInventoryWeight } from "../../scripts/witcher.js";
+import { DragDrop, WitcherActorSheetV2, WitcherDialog, deepClone, fromUuidSync, renderApplication, renderDocumentSheet, sanitizeSheetRenderOptions } from "../../setup/foundry-compat.js";
+import { findOrphanedStoredItems, findUnmarkedStoredItems } from "../../scripts/storedItems.mjs";
+import {
+  isContainerItem,
+  migrateLegacyContainerItems,
+  moveContainerBetweenActors,
+  prepareContainerItemSource,
+} from "../../scripts/containerStorage.mjs";
 
-export default class WitcherMonsterSheet extends ActorSheet {
+export default class WitcherLootSheet extends WitcherActorSheetV2 {
 
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      classes: ["witcher", "sheet", "actor"],
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
+
+  static DEFAULT_OPTIONS = {
+    position: {
       width: 1120,
       height: 600,
-      template: "systems/TheWitcherTRPG/templates/sheets/actor/actor-sheet.hbs",
-      tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
-    });
-  }
+    },
+    template: "systems/thewitchertrpg/templates/sheets/actor/actor-sheet.hbs",
+  };
 
   getData() {
     let context = super.getData();
@@ -24,21 +35,47 @@ export default class WitcherMonsterSheet extends ActorSheet {
     context.enhancements = context.items?.filter(i => i.type == "enhancement" && !i.system.applied);
     context.loot = context.actor.getList("mount").concat(context.actor.getList("mutagens")).concat(context.actor.getList("container")).concat(context.actor.getList("alchemical")).concat(context.actor.getList("diagrams"));
 
-    context.totalWeight = context.items.weight() + calc_currency_weight(context.actor.system.currency);
-    context.totalCost = context.items.cost();
+    context.totalWeight = calculateInventoryWeight(context.actor.items) + calc_currency_weight(context.actor.system.currency);
+    context.totalCost = calculateInventoryCost(context.actor.items);
 
     context.isGM = game.user.isGM
 
-    console.log(context)
-
     return context;
+  }
+
+  async _onDropItem(event, item) {
+    if (!isContainerItem(item)) {
+      return super._onDropItem(event, item);
+    }
+    if (item.parent?.documentName === "Actor") {
+      if (item.parent.uuid === this.actor.uuid) return super._onDropItem(event, item);
+      return moveContainerBetweenActors(item, this.actor, fromUuidSync);
+    }
+    return this._addItem(this.actor, item, 1, false, { isTransfer: true });
   }
 
   activateListeners(html) {
     super.activateListeners(html);
 
+    if (this.actor.isOwner) {
+      migrateLegacyContainerItems(this.actor).catch(error => {
+        console.warn("TheWitcherTRPG | Could not migrate legacy container Items.", error);
+      });
+      Promise.all([
+        ...findOrphanedStoredItems(this.actor.items).map(item => (
+          item.update({ "system.isStored": false })
+        )),
+        ...findUnmarkedStoredItems(this.actor.items).map(item => (
+          item.update({ "system.isStored": true })
+        )),
+      ]).catch(error => {
+        console.warn("TheWitcherTRPG | Could not restore orphaned stored Items.", error);
+      });
+    }
+
     html.find(".inline-edit").change(this._onInlineEdit.bind(this));
     html.find(".item-edit").on("click", this._onItemEdit.bind(this));
+    html.find(".container-contents-open").on("click", this._onContainerContents.bind(this));
     html.find(".item-show").on("click", this._onItemShow.bind(this));
     html.find(".item-weapon-display").on("click", this._onItemDisplayInfo.bind(this));
     html.find(".item-armor-display").on("click", this._onItemDisplayInfo.bind(this));
@@ -47,6 +84,7 @@ export default class WitcherMonsterSheet extends ActorSheet {
     html.find(".item-buy").on("click", this._onItemBuy.bind(this));
     html.find(".item-hide").on("click", this._onItemHide.bind(this));
     html.find(".add-item").on("click", this._onItemAdd.bind(this));
+    html.find(".currency-ledger-open").on("click", this._onCurrencyLedgerOpen.bind(this));
 
     html.find("input").focusin(ev => this._onFocusIn(ev));
 
@@ -55,11 +93,7 @@ export default class WitcherMonsterSheet extends ActorSheet {
       let item = this.actor.items.get(itemId);
       ev.originalEvent.dataTransfer.setData(
         "text/plain",
-        JSON.stringify({
-          item: item,
-          actor: this.actor,
-          type: "itemDrop",
-        }),
+        JSON.stringify(item.toDragData()),
       )
     });
 
@@ -69,7 +103,8 @@ export default class WitcherMonsterSheet extends ActorSheet {
       permissions: { dragstart: this._canDragStart.bind(this), drop: this._canDragDrop.bind(this) },
       callbacks: { dragstart: this._onDragStart.bind(this), drop: this._onDrop.bind(this) }
     })
-    this._dragDrop.push(newDragDrop);
+    newDragDrop.bind(this.element);
+    this._witcherDragDrop = newDragDrop;
   }
 
   async _onItemAdd(event) {
@@ -97,26 +132,48 @@ export default class WitcherMonsterSheet extends ActorSheet {
       itemData.system = { type: "alchemical", level: "novice", isFormulae: true };
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   }
 
-  async _addItem(actor, Additem, numberOfItem, forcecreate = false) {
-    let foundItem = (actor.items).find(item => item.name == Additem.name);
+  async _addItem(actor, Additem, numberOfItem, forcecreate = false, options = {}) {
+    const currencyDeposit = await depositCurrencyItem(
+      actor,
+      Additem,
+      numberOfItem,
+      `${game.i18n.localize("WITCHER.CurrencyLedger.TransferredItem")} ${Additem.name}`,
+    );
+    if (currencyDeposit) return currencyDeposit.deposited;
+
+    const isContainer = isContainerItem(Additem);
+    let foundItem = isContainer
+      ? null
+      : (actor.items).find(item => item.name == Additem.name && item.type == Additem.type && !item.system.isStored);
     if (foundItem && !forcecreate) {
       await foundItem.update({ 'system.quantity': Number(foundItem.system.quantity) + Number(numberOfItem) })
     }
     else {
-      let newItem = { ...Additem };
+      let newItem = deepClone(Additem.toObject?.() ?? Additem);
+      if (isContainer) newItem = prepareContainerItemSource(newItem);
 
       if (numberOfItem) {
-        newItem.system.quantity = Number(numberOfItem)
+        newItem.system.quantity = isContainer ? 1 : Number(numberOfItem)
+      }
+      if (isContainer && options.isTransfer) {
+        newItem.system.content = [];
+        newItem.system.isStored = false;
+      }
+      if (options.isTransfer && newItem.type === "diagrams") {
+        newItem.system.learned = false;
       }
       await actor.createEmbeddedDocuments("Item", [newItem]);
     }
+    return true;
   }
 
   async _removeItem(actor, itemId, quantityToRemove) {
-    actor.removeItem(itemId, quantityToRemove)
+    if (!actor?.items?.get(itemId)) return false;
+    await actor.removeItem(itemId, quantityToRemove)
+    return true;
   }
 
   _onInlineEdit(event) {
@@ -141,12 +198,32 @@ export default class WitcherMonsterSheet extends ActorSheet {
     event.currentTarget.select();
   }
 
+  async _onCurrencyLedgerOpen(event) {
+    event.preventDefault();
+    await openCurrencyLedger(this.actor, event.currentTarget.dataset.currency);
+  }
+
   _onItemEdit(event) {
     event.preventDefault();
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    renderDocumentSheet(item)
+  }
+
+  async _onContainerContents(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const itemId = event.currentTarget.closest(".item")?.dataset.itemId;
+    const item = this.actor.items.get(itemId);
+    if (!item?.sheet) return false;
+
+    if (typeof item.sheet.openContents === "function") {
+      await item.sheet.openContents();
+      return true;
+    }
+    await renderDocumentSheet(item);
+    return true;
   }
 
   async _onItemShow(event) {
@@ -154,14 +231,14 @@ export default class WitcherMonsterSheet extends ActorSheet {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    new Dialog({
+    renderApplication(new WitcherDialog({
       title: item.name,
       content: `<img src="${item.img}" alt="${item.img}" width="100%" />`,
       buttons: {}
     }, {
       width: 520,
       resizable: true
-    }).render(true);
+    }));
   }
 
   async _onItemDelete(event) {
@@ -211,17 +288,17 @@ export default class WitcherMonsterSheet extends ActorSheet {
       </script>
 
       <label>${game.i18n.localize("WITCHER.Loot.InitialCost")}: ${item.system.cost}</label><br />
-      <label>${game.i18n.localize("WITCHER.Loot.HowMany")}: <input id="itemQty" onChange="calcTotalCost()" type="number" class="small" name="itemQty" value=1> /${item.system.quantity}</label> <br />
-      <label>${game.i18n.localize("WITCHER.Loot.ItemCost")}</label> <input id="customCost" onChange="calcTotalCost()" type="number" name="costPerItemValue" value=${item.system.cost}>${game.i18n.localize("WITCHER.Loot.Percent")}<select id="percent" onChange="applyPercentage()" name="percentage">${percentOptions}</select><br /><br />
-      <label>${game.i18n.localize("WITCHER.Loot.TotalCost")}</label> <input id="costTotal" type="number" class="small" name="costTotalValue" value=${item.system.cost}> <select name="coinType">${coinOptions}</select><br />
+      <label>${game.i18n.localize("WITCHER.Loot.HowMany")}: <input id="itemQty" onChange="calcTotalCost()" type="number" class="small" name="itemQty" min="1" max="${item.system.quantity}" value="1"> /${item.system.quantity}</label> <br />
+      <label>${game.i18n.localize("WITCHER.Loot.ItemCost")}</label> <input id="customCost" onChange="calcTotalCost()" type="number" name="costPerItemValue" min="0" value="${item.system.cost}">${game.i18n.localize("WITCHER.Loot.Percent")}<select id="percent" onChange="applyPercentage()" name="percentage">${percentOptions}</select><br /><br />
+      <label>${game.i18n.localize("WITCHER.Loot.TotalCost")}</label> <input id="costTotal" type="number" class="small" name="costTotalValue" min="0" value="${item.system.cost}"> <select name="coinType">${coinOptions}</select><br />
       `
     let Characteroptions = `<option value="">other</option>`
     for (let actor of game.actors) {
       if (actor.testUserPermission(game.user, "OWNER")) {
         if (actor == game.user.character) {
-          Characteroptions += `<option value="${actor._id}" selected>${actor.name}</option>`
+          Characteroptions += `<option value="${actor.id}" selected>${actor.name}</option>`
         } else {
-          Characteroptions += `<option value="${actor._id}">${actor.name}</option>`
+          Characteroptions += `<option value="${actor.id}">${actor.name}</option>`
         }
       };
     }
@@ -249,36 +326,56 @@ export default class WitcherMonsterSheet extends ActorSheet {
       return
     }
 
-    let buyerActor = game.actors.get(characterId)
-    let token = buyerActor.token ?? buyerActor.getActiveTokens()[0]
-    if (token) {
+    numberOfItem = Number(numberOfItem);
+    totalCost = Number(totalCost);
+    const availableQuantity = Number(item.system.quantity);
+    if (!Number.isInteger(numberOfItem) || numberOfItem < 1 || numberOfItem > availableQuantity) {
+      return ui.notifications.error(game.i18n.localize("WITCHER.Items.InvalidQuantity"));
+    }
+    if (!Number.isInteger(totalCost) || totalCost < 0) {
+      return ui.notifications.error(game.i18n.localize("WITCHER.Loot.InvalidCost"));
+    }
+    if (!Object.hasOwn(this.actor.system.currency, coinType)) {
+      return ui.notifications.error(game.i18n.localize("WITCHER.Loot.InvalidCost"));
+    }
+
+    let buyerActor = characterId ? game.actors.get(characterId) : null;
+    const token = buyerActor?.token ?? buyerActor?.getActiveTokens()?.[0]
+    if (token?.actor) {
       buyerActor = token.actor
     }
     let hasEnoughMoney = true
     if (buyerActor) {
-      hasEnoughMoney = buyerActor.system.currency[coinType] >= totalCost
+      hasEnoughMoney = Number(buyerActor.system.currency?.[coinType]) >= totalCost
     }
 
     if (!hasEnoughMoney) {
-      ui.notifications.error("Not Enough Coins");
+      ui.notifications.error(game.i18n.localize("WITCHER.Loot.NotEnoughCoins"));
     } else {
-      this._removeItem(this.actor, itemId, numberOfItem)
+      let containerMoved = false;
       if (buyerActor) {
-        this._addItem(buyerActor, item, numberOfItem)
+        const added = isContainerItem(item)
+          ? await moveContainerBetweenActors(item, buyerActor, fromUuidSync)
+          : await this._addItem(buyerActor, item, numberOfItem, false, { isTransfer: true })
+        if (!added) return;
+        containerMoved = isContainerItem(item);
       }
+      if (!containerMoved) await this._removeItem(this.actor, itemId, numberOfItem)
 
-      if (buyerActor) {
-        buyerActor.update({ [`system.currency.${coinType}`]: buyerActor.system.currency[coinType] - totalCost })
+      if (totalCost > 0) {
+        if (buyerActor) {
+          await applyCurrencyLedgerChange(buyerActor, coinType, -totalCost, `${game.i18n.localize("WITCHER.CurrencyLedger.Purchased")} ${item.name}`)
+        }
+        await applyCurrencyLedgerChange(this.actor, coinType, totalCost, `${game.i18n.localize("WITCHER.CurrencyLedger.Sold")} ${item.name}`)
       }
-      this.actor.update({ [`system.currency.${coinType}`]: Number(this.actor.system.currency[coinType]) + Number(totalCost) })
     }
   }
 
-  _onItemHide(event) {
+  async _onItemHide(event) {
     event.preventDefault();
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
-    item.update({ "system.isHidden": !item.system.isHidden })
+    if (item) await item.update({ "system.isHidden": !item.system.isHidden })
   }
 
   _onItemDisplayInfo(event) {

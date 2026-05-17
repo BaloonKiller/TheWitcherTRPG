@@ -1,5 +1,5 @@
 <form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
     <table class="item-table">
         <tr>
             <th>{{localize "WITCHER.Diagram.Formulae"}}</th>
@@ -11,6 +11,7 @@
                 <th title="{{localize "WITCHER.Diagram.craftingDC"}}">{{localize "WITCHER.DC"}}</th>
             {{/if}}
             <th>{{localize "WITCHER.Diagram.craftingTime"}}</th>
+            <th>{{localize "WITCHER.Diagram.OutputQuantity"}}</th>
             {{#unless item.system.isFormulae}}
                 <th>{{localize "WITCHER.Diagram.investment"}}</th>
             {{/unless}}
@@ -60,13 +61,15 @@
                 </td>
             {{/if}}
             <td><input type="text" name="system.craftingTime" value="{{item.system.craftingTime}}"/></td>
+            <td><input type="number" name="system.outputQuantity" min="1" step="1"
+                       value="{{item.system.outputQuantity}}" data-dtype="Number"/></td>
             {{#unless item.system.isFormulae}}
                 <td><input type="text" name="system.investment" value="{{item.system.investment}}" data-dtype="Number"/>
                 </td>
             {{/unless}}
         </tr>
     </table>
-    {{>"systems/TheWitcherTRPG/templates/partials/associated-item.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/associated-item.hbs"}}
     <div class="description">
         <label class="label-info"><b>{{localize "WITCHER.Item.Description"}}</b></label>
         {{editor item.system.description target="system.description" button=true editable=editable}}
@@ -77,15 +80,15 @@
             <th colspan="9">{{localize "WITCHER.Loot.Components"}}</th>
         </tr>
         <tr class="components-display">
-            <th><img src="systems/TheWitcherTRPG/assets/images/vitriol.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/rebis.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/aether.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/quebrith.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/hydragenum.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/vermilion.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/sol.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/caelum.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/fulgur.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/vitriol.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/rebis.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/aether.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/quebrith.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/hydragenum.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/vermilion.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/sol.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/caelum.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/fulgur.png" class="substance-img"/></th>
         </tr>
         <tr>
             <td><input type="number" name="system.alchemyComponents.vitriol"
@@ -109,24 +112,28 @@
                        value="{{item.system.alchemyComponents.fulgur}}"/></td>
         </tr>
     {{/if}}
-    {{#unless item.system.isFormulae}}
         <tr>
             <table class="item-bottom-table">
                 <tr>
-                    <th><a class="add-component" title="{{localize " WITCHER.Item.AddComponent"}}"><i
+                    <th><a class="add-component" title="{{localize "WITCHER.Item.AddComponent"}}"><i
                             class="fas fa-plus"></i></a></th>
-                    <th>{{localize "WITCHER.Diagram.components"}}</th>
+                    <th>
+                        {{#if item.system.isFormulae}}
+                            {{localize "WITCHER.Diagram.otherComponents"}}
+                        {{else}}
+                            {{localize "WITCHER.Diagram.components"}}
+                        {{/if}}
+                    </th>
                     <th><label>{{localize "WITCHER.Item.Quantity"}}</label></th>
                 </tr>
                 {{#each item.system.craftingComponents as |component name|}}
                     <tr>
                         <th class="list-item" data-id="{{component.id}}">
-                            <a class="remove-component" title="{{localize " WITCHER.Item.RemoveComponent"}}"><i
+                            <a class="remove-component" title="{{localize "WITCHER.Item.RemoveComponent"}}"><i
                                     class="fas fa-minus"></i></a>
                         </th>
                         <td class="list-item" data-id="{{component.id}}">
-                            <input class="list-edit item-effect" data-field="name" placeholder="{{localize "
-                            WITCHER.table.Name"}}" type="text" value="{{component.name}}"/>
+                            <input class="list-edit item-effect" data-field="name" placeholder="{{localize "WITCHER.table.Name"}}" type="text" value="{{component.name}}"/>
                         </td>
                         <td class="list-item" data-id="{{component.id}}">
                             <input class="list-edit" data-field="quantity" type="number" placeholder="0"
@@ -136,6 +143,5 @@
                 {{/each}}
             </table>
         </tr>
-    {{/unless}}
 </table>
 </form>

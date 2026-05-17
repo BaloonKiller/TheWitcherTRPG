@@ -17,6 +17,7 @@ export default class CharacterData extends CommonActorData {
       gender:  new fields.StringField({ initial: ''}),
 
       improvementPoints: new fields.NumberField({initial: 0}),
+      recipeMemoryBonus: new fields.NumberField({initial: 0}),
       skillTraining1: new fields.SchemaField(skillTraining()),
       skillTraining2: new fields.SchemaField(skillTraining()),
       skillTraining3: new fields.SchemaField(skillTraining()),

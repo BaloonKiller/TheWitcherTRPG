@@ -1,7 +1,6 @@
 import MonsterData from "../data/actor/monsterData.js";
 import ContainerData from "../data/item/containerData.js";
 import LootData from "../data/actor/lootData.js";
-import CommonActorData from "../data/actor/commonActorData.js"
 import CharacterData from "../data/actor/characterData.js";
 import ValuableData from "../data/item/valuableData.js";
 import WeaponData from "../data/item/weaponData.js";
@@ -10,7 +9,6 @@ import MountData from "../data/item/mountData.js";
 import AlchemicalData from "../data/item/alchemicalData.js";
 import MutagenData from "../data/item/mutagenData.js";
 import NoteData from "../data/item/noteData.js";
-import CommonItemData from "../data/item/commonItemData.js";
 import ComponentData from "../data/item/componentData.js";
 import RaceData from "../data/item/raceData.js";
 import ProfessionData from "../data/item/professionData.js";
@@ -24,9 +22,8 @@ import MysteryActorData from "../data/investigation/mysteryActorData.js";
 
 
 export const registerDataModels = () => {
-    foundry.utils.mergeObject(CONFIG.Actor.dataModels, {
-        // The keys are the types defined in our template.json
-        baseActor: CommonActorData,
+    Object.assign(CONFIG.Actor.dataModels, {
+        // The keys are the Actor types declared in system.json.
         character: CharacterData,
         monster: MonsterData,
         loot: LootData,
@@ -34,9 +31,8 @@ export const registerDataModels = () => {
         mystery: MysteryActorData
       })
  
-      foundry.utils.mergeObject(CONFIG.Item.dataModels, {
-         // The keys are the types defined in our template.json
-        base: CommonItemData,
+      Object.assign(CONFIG.Item.dataModels, {
+         // The keys are the Item types declared in system.json.
         alchemical: AlchemicalData,
         armor: ArmorData,
         container: ContainerData,

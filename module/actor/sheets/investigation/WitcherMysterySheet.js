@@ -1,16 +1,19 @@
 import { WITCHER } from "../../../setup/config.js";
+import { ItemDocument, WitcherActorSheetV2, renderDocumentSheet, sanitizeSheetRenderOptions } from "../../../setup/foundry-compat.js";
 
-export default class WitcherMysterySheet extends ActorSheet {
+export default class WitcherMysterySheet extends WitcherActorSheetV2 {
 
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      classes: ["witcher", "sheet", "actor"],
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
+
+  static DEFAULT_OPTIONS = {
+    position: {
       width: 1120,
       height: 600,
-      template: "systems/TheWitcherTRPG/templates/sheets/investigation/mystery-sheet.hbs",
-      tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
-    });
-  }
+    },
+    template: "systems/thewitchertrpg/templates/sheets/investigation/mystery-sheet.hbs",
+  };
 
   getData() {
     let context = super.getData();
@@ -46,16 +49,16 @@ export default class WitcherMysterySheet extends ActorSheet {
       type: element.dataset.itemtype
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   }
 
 
-  _onItemEdit(event) {
+  async _onItemEdit(event) {
     event.preventDefault();
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    await renderDocumentSheet(item)
   }
 
   async _onItemDelete(event) {
@@ -64,11 +67,11 @@ export default class WitcherMysterySheet extends ActorSheet {
     return await this.actor.items.get(itemId).delete();
   }
 
-  _onItemHide(event) {
+  async _onItemHide(event) {
     event.preventDefault();
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
-    item.update({ "system.isHidden": !item.system.isHidden })
+    if (item) await item.update({ "system.isHidden": !item.system.isHidden })
   }
 
   _onInlineEdit(event) {

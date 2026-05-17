@@ -3,64 +3,85 @@ import * as Chat from "./scripts/chat.js";
 import * as Attack from "./scripts/attack.js"
 import * as VerbalCombat from "./scripts/verbalCombat.js"
 import { registerSettings } from "./setup/settings.js";
+import { sumItemProperty, updateDerived } from "./scripts/witcher.js";
 
 import WitcherItem from "./item/witcherItem.js";
 import WitcherActor from "./actor/witcherActor.js";
 
 import { registerDataModels } from "./setup/registerDataModels.js";
 import { registerSheets } from "./setup/registerSheets.js";
+import { MacroDocument, loadTemplates, registerFoundryCompatibility, registerTokenActorSheetDoubleClick } from "./setup/foundry-compat.js";
+import { migrateGeneratedImagePaths } from "./setup/migrations.js";
+import { registerDamageStatusEffectSyncHooks } from "./scripts/damageEffects.mjs";
+import { registerCriticalWoundEffectSyncHooks } from "./scripts/criticalWoundEffects.mjs";
+import { registerCurrencyItemMigrationHooks } from "./scripts/currencyLedger.js";
+import { registerDeathSaveHooks } from "./scripts/deathSaves.mjs";
+import { normalizeNegativeResolveValues } from "./scripts/verbalCombatDamage.mjs";
+import { registerSpellAreaEffectHooks } from "./scripts/spellAreaEffects.mjs";
+import { registerOngoingStatusEffectHooks } from "./scripts/ongoingStatusEffects.mjs";
+import { registerSpellBuffHooks } from "./scripts/spellBuffs.mjs";
 
 async function preloadHandlebarsTemplates() {
     const templatePath = [
-        "systems/TheWitcherTRPG/templates/sheets/actor/character-sheet.hbs",
-        "systems/TheWitcherTRPG/templates/sheets/actor/monster-sheet.hbs",
-        "systems/TheWitcherTRPG/templates/sheets/actor/loot-sheet.hbs",
+        "systems/thewitchertrpg/templates/sheets/actor/character-sheet.hbs",
+        "systems/thewitchertrpg/templates/sheets/actor/monster-sheet.hbs",
+        "systems/thewitchertrpg/templates/sheets/actor/loot-sheet.hbs",
 
-        "systems/TheWitcherTRPG/templates/partials/character-header.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-skills.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-profession.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-background.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-inventory.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-inventory-mounts.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-inventory-runes-glyphs.hbs",
-        "systems/TheWitcherTRPG/templates/partials/tab-magic.hbs",
-        "systems/TheWitcherTRPG/templates/partials/crit-wounds-table.hbs",
-        "systems/TheWitcherTRPG/templates/partials/substances.hbs",
-        "systems/TheWitcherTRPG/templates/partials/monster-skill-tab.hbs",
-        "systems/TheWitcherTRPG/templates/partials/monster-inventory-tab.hbs",
-        "systems/TheWitcherTRPG/templates/partials/monster-details-tab.hbs",
-        "systems/TheWitcherTRPG/templates/partials/monster-spell-tab.hbs",
-        "systems/TheWitcherTRPG/templates/partials/skill-display.hbs",
-        "systems/TheWitcherTRPG/templates/partials/monster-skill-display.hbs",
-        "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs",
-        "systems/TheWitcherTRPG/templates/partials/item-header.hbs",
-        "systems/TheWitcherTRPG/templates/partials/item-image.hbs",
-        "systems/TheWitcherTRPG/templates/partials/associated-item.hbs",
+        "systems/thewitchertrpg/templates/partials/character-header.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-skills.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-profession.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-background.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-inventory.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-inventory-mounts.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-inventory-runes-glyphs.hbs",
+        "systems/thewitchertrpg/templates/partials/tab-magic.hbs",
+        "systems/thewitchertrpg/templates/partials/crit-wounds-table.hbs",
+        "systems/thewitchertrpg/templates/partials/substances.hbs",
+        "systems/thewitchertrpg/templates/partials/monster-skill-tab.hbs",
+        "systems/thewitchertrpg/templates/partials/monster-inventory-tab.hbs",
+        "systems/thewitchertrpg/templates/partials/monster-details-tab.hbs",
+        "systems/thewitchertrpg/templates/partials/monster-spell-tab.hbs",
+        "systems/thewitchertrpg/templates/partials/skill-display.hbs",
+        "systems/thewitchertrpg/templates/partials/monster-skill-display.hbs",
+        "systems/thewitchertrpg/templates/partials/loot-item-display.hbs",
+        "systems/thewitchertrpg/templates/partials/item-header.hbs",
+        "systems/thewitchertrpg/templates/partials/item-image.hbs",
+        "systems/thewitchertrpg/templates/partials/associated-item.hbs",
 
-        "systems/TheWitcherTRPG/templates/sheets/investigation/mystery-sheet.hbs",
-        "systems/TheWitcherTRPG/templates/partials/investigation/clue-display.hbs",
-        "systems/TheWitcherTRPG/templates/partials/investigation/obstacle-display.hbs",
+        "systems/thewitchertrpg/templates/sheets/investigation/mystery-sheet.hbs",
+        "systems/thewitchertrpg/templates/partials/investigation/clue-display.hbs",
+        "systems/thewitchertrpg/templates/partials/investigation/obstacle-display.hbs",
 
-        "systems/TheWitcherTRPG/templates/sheets/verbal-combat.hbs",
-        "systems/TheWitcherTRPG/templates/sheets/weapon-attack.hbs"
+        "systems/thewitchertrpg/templates/sheets/verbal-combat.hbs",
+        "systems/thewitchertrpg/templates/sheets/weapon-attack.hbs"
     ];
     return loadTemplates(templatePath);
 }
 
-Hooks.once("init", function () {
+Hooks.once("init", async function () {
     console.log("TheWitcherTRPG | init system");
 
     CONFIG.WITCHER = WITCHER;
-    CONFIG.statusEffects = CONFIG.WITCHER.statusEffects;
+    CONFIG.statusEffects = CONFIG.WITCHER.statusEffectsById;
     CONFIG.Item.documentClass = WitcherItem;
     CONFIG.Actor.documentClass = WitcherActor;
 
+    registerFoundryCompatibility();
+    registerTokenActorSheetDoubleClick();
+    registerHandlebarsHelpers();
     registerDataModels();
-    registerSheets();
-    preloadHandlebarsTemplates();
     registerSettings();
+    registerSheets();
+    registerDamageStatusEffectSyncHooks(Hooks, updateDerived);
+    registerCriticalWoundEffectSyncHooks(Hooks, updateDerived);
+    registerCurrencyItemMigrationHooks();
+    registerDeathSaveHooks(Hooks, updateDerived);
+    registerSpellAreaEffectHooks(Hooks, updateDerived);
+    registerOngoingStatusEffectHooks();
+    registerSpellBuffHooks();
+    await preloadHandlebarsTemplates();
 });
 
 
@@ -69,7 +90,8 @@ Hooks.on("renderChatLog", (app, html, data) => {
 }
 );
 
-Hooks.on('renderChatMessage', (message, html, data) => {
+Hooks.on('renderChatMessageHTML', (message, html, data) => {
+    Chat.syncRollRerollMessageControls(message, html)
     Attack.chatMessageListeners(message, html)
     VerbalCombat.chatMessageListeners(message, html)
 });
@@ -78,10 +100,23 @@ Hooks.on('renderChatMessage', (message, html, data) => {
 /*  Hotbar Macros                               */
 /* -------------------------------------------- */
 Hooks.once("ready", async function () {
+    try {
+        await migrateGeneratedImagePaths();
+    } catch (error) {
+        console.error("thewitchertrpg | Generated image migration failed.", error);
+        ui.notifications.error(game.i18n.localize("WITCHER.Migration.ImagesFailed"));
+    }
+
+    try {
+        await normalizeNegativeResolveValues();
+    } catch (error) {
+        console.error("thewitchertrpg | Negative Resolve normalization failed.", error);
+    }
+
     // Wait to register hotbar drop hook on ready so that modules could register earlier if they want to
     Hooks.on("hotbarDrop", (bar, data, slot) => createBoilerplateMacro(data, slot));
 
-    if (game.settings.get("TheWitcherTRPG", "useWitcherFont")) {
+    if (game.settings.get("thewitchertrpg", "useWitcherFont")) {
         let els = document.getElementsByClassName("game")
         Array.prototype.forEach.call(els, function (el) {
             if (el) { el.classList.add("witcher-style") }
@@ -114,7 +149,7 @@ Hooks.once("dragRuler.ready", (SpeedProvider) => {
         }
     }
 
-    dragRuler.registerSystem("TheWitcherTRPG", FictionalGameSystemSpeedProvider)
+    dragRuler.registerSystem("thewitchertrpg", FictionalGameSystemSpeedProvider)
 })
 
 Hooks.once("polyglot.init", (LanguageProvider) => {
@@ -145,6 +180,7 @@ Hooks.once("polyglot.init", (LanguageProvider) => {
 })
 
 Hooks.on("getChatLogEntryContext", Chat.addChatMessageContextOptions);
+Hooks.on("getChatMessageContextOptions", Chat.addChatMessageContextOptions);
 
 /**
  * Create a Macro from an Item drop.
@@ -159,15 +195,15 @@ async function createBoilerplateMacro(data, slot) {
         if (!actor) {
             return;
         }
-        const command = `game.actors.get('${data.id}')?.sheet.render(true)`;
+        const command = `const actor = game.actors.get('${data.id}'); actor?.sheet?.render(true, { popOut: true });`;
         let macro =
-            game.macros.entities.find(macro => macro.name === actor.name && macro.command === command);
+            game.macros.find(macro => macro.name === actor.name && macro.command === command);
 
         if (!macro) {
-            macro = await Macro.create({
+            macro = await MacroDocument.create({
                 name: actor.name,
                 type: 'script',
-                img: actor.system.img,
+                img: actor.img,
                 command: command
             }, { renderSheet: false });
         }
@@ -182,7 +218,7 @@ async function createBoilerplateMacro(data, slot) {
         let foundActor = null
         game.actors.forEach(actor => {
             actor.items.forEach(item => {
-                if (weapon._id == item.id) {
+                if ((weapon.id ?? weapon._id) == item.id) {
                     foundActor = actor
                 }
             });
@@ -191,10 +227,10 @@ async function createBoilerplateMacro(data, slot) {
             return ui.notifications.warn("You can only create macro buttons with the original character");
         }
         const command =
-            `actor = game.actors.get('${foundActor.id}'); actor.rollItem("${weapon._id}")`;
+            `const actor = game.actors.get('${foundActor.id}'); await actor?.rollItem("${weapon.id ?? weapon._id}");`;
         let macro = game.macros.find(m => (m.name === weapon.name) && (m.command === command));
         if (!macro) {
-            macro = await Macro.create({
+            macro = await MacroDocument.create({
                 name: weapon.name,
                 type: "script",
                 img: weapon.img,
@@ -202,7 +238,7 @@ async function createBoilerplateMacro(data, slot) {
                 flags: { "boilerplate.itemMacro": true }
             });
         }
-        game.user.assignHotbarMacro(macro, slot);
+        await game.user.assignHotbarMacro(macro, slot);
         return false;
     }
     else if (data.item.type == 'spell') {
@@ -210,7 +246,7 @@ async function createBoilerplateMacro(data, slot) {
         let foundActor = null
         game.actors.forEach(actor => {
             actor.items.forEach(item => {
-                if (spell._id == item.id) {
+                if ((spell.id ?? spell._id) == item.id) {
                     foundActor = actor
                 }
             });
@@ -219,10 +255,10 @@ async function createBoilerplateMacro(data, slot) {
             return ui.notifications.warn("You can only create macro buttons with the original character");
         }
         const command =
-            `actor = game.actors.get('${foundActor.id}'); actor.rollSpell("${spell._id}")`;
+            `const actor = game.actors.get('${foundActor.id}'); await actor?.rollSpell("${spell.id ?? spell._id}");`;
         let macro = game.macros.find(m => (m.name === spell.name) && (m.command === command));
         if (!macro) {
-            macro = await Macro.create({
+            macro = await MacroDocument.create({
                 name: spell.name,
                 type: "script",
                 img: spell.img,
@@ -230,29 +266,43 @@ async function createBoilerplateMacro(data, slot) {
                 flags: { "boilerplate.itemMacro": true }
             });
         }
-        game.user.assignHotbarMacro(macro, slot);
+        await game.user.assignHotbarMacro(macro, slot);
         return false;
     }
 }
 
-Handlebars.registerHelper("getOwnedComponentCount", function (actor, componentName) {
-    if (!actor) {
-        console.warn("'actor' parameter passed into getOwnedComponentCount is undefined. That might be a problem with one of the selected actors diagrams.");
-        return 0;
-    }
-    let ownedComponent = actor.findNeededComponent(componentName);
-    return ownedComponent.sum("quantity");
-});
+function registerHandlebarsHelpers() {
+    Handlebars.registerHelper("select", function (selected, options) {
+        const html = options.fn(this);
+        const values = new Set((Array.isArray(selected) ? selected : [selected]).map(String));
+        const selectedHtml = html.replace(/(<option\b[^>]*\bvalue=(["'])(.*?)\2[^>]*)(>)/g, (match, start, quote, value, end) => {
+            if (!values.has(value) || /\sselected\b/.test(start)) {
+                return match;
+            }
+            return `${start} selected${end}`;
+        });
+        return new Handlebars.SafeString(selectedHtml);
+    });
 
-Handlebars.registerHelper("getSetting", function (setting) {
-    return game.settings.get("TheWitcherTRPG", setting);
-});
+    Handlebars.registerHelper("getOwnedComponentCount", function (actor, componentName) {
+        if (!actor) {
+            console.warn("'actor' parameter passed into getOwnedComponentCount is undefined. That might be a problem with one of the selected actors diagrams.");
+            return 0;
+        }
+        let ownedComponent = actor.findNeededComponent(componentName);
+        return sumItemProperty(ownedComponent, "quantity");
+    });
 
-Handlebars.registerHelper("window", function (...props) {
-    props.pop();
-    return props.reduce((result, prop) => result[prop], window);
-});
+    Handlebars.registerHelper("getSetting", function (setting) {
+        return game.settings.get("thewitchertrpg", setting);
+    });
 
-Handlebars.registerHelper("includes", function (csv, substr) {
-    return csv.split(",").map(v => v.trim()).includes(substr);
-});
+    Handlebars.registerHelper("window", function (...props) {
+        props.pop();
+        return props.reduce((result, prop) => result[prop], window);
+    });
+
+    Handlebars.registerHelper("includes", function (csv, substr) {
+        return csv.split(",").map(v => v.trim()).includes(substr);
+    });
+}

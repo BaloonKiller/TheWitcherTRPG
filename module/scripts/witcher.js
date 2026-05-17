@@ -1,8 +1,29 @@
 import { extendedRoll } from "./chat.js";
 import { RollConfig } from "./rollConfig.js";
+import { getCriticalWoundModifierSources } from "./criticalWoundEffects.mjs";
+import { addActorSkillEffectModifiers, isActorEffectItemActive } from "./actorSkillEffects.mjs";
+import { WitcherDialog, randomID, renderApplication } from "../setup/foundry-compat.js";
+import { calculateCarriedInventoryWeight } from "./transport.mjs";
 
 export function getRandomInt(max) {
-	return Math.floor(Math.random() * (max + 1)) + 1;
+	const upperBound = Math.floor(Number(max));
+	if (!Number.isFinite(upperBound) || upperBound < 1) return 0;
+	return Math.floor(Math.random() * upperBound) + 1;
+}
+
+export function sumItemProperty(items, property) {
+	return items.reduce((total, item) => total + Number(item.system?.[property] ?? item.system?.system?.[property] ?? 0), 0);
+}
+
+export function calculateInventoryWeight(items) {
+	return calculateCarriedInventoryWeight(items);
+}
+
+export function calculateInventoryCost(items) {
+	const cost = items.reduce((total, item) => {
+		return total + Number(item.system?.quantity ?? 0) * Number(item.system?.cost ?? 0);
+	}, 0);
+	return Math.ceil(cost);
 }
 
 /*
@@ -12,7 +33,7 @@ with the Hand to Hand Table, page 48 of Witcher TRPG Handbook.
 
 @param {Actor} actor - The actor passed in from actor-sheet.js to have its properties updated
 */
-function updateDerived(actor) {
+function updateDerived(actor, updateOptions = {}) {
 	const thisActor = actor;
 	const stats = thisActor.system.stats;
 	const base = Math.floor((stats.body.current + stats.will.current) / 2);
@@ -47,7 +68,7 @@ function updateDerived(actor) {
 	thisActor.system.stats.will.modifiers.forEach(item => willTotalModifiers += Number(item.value));
 	thisActor.system.stats.luck.modifiers.forEach(item => luckTotalModifiers += Number(item.value));
 
-	let activeEffects = thisActor.getList("effect").filter(e => e.system.isActive);
+	let activeEffects = getActorModifierSources(thisActor);
 	activeEffects.forEach(item => {
 		item.system.stats.forEach(stat => {
 			switch (stat.stat) {
@@ -111,8 +132,7 @@ function updateDerived(actor) {
 	thisActor.system.coreStats.woundTreshold.modifiers.forEach(item => wtTotalModifiers += Number(item.value));
 
 	let curentEncumbrance = (thisActor.system.stats.body.max + bodyTotalModifiers) * 10 + encTotalModifiers
-	var totalWeights = 0
-	thisActor.items.forEach(item => { if (item.system.weight && item.system.quantity) { totalWeights += (Number(item.system.weight) * Number(item.system.quantity)) } })
+	let totalWeights = calculateCarriedInventoryWeight(thisActor.items)
 	totalWeights += calc_currency_weight(thisActor.system.currency);
 	let encDiff = 0
 	if (curentEncumbrance < totalWeights) {
@@ -223,7 +243,7 @@ function updateDerived(actor) {
 		curFocus = (Math.floor((curWill + curInt) / 2) * 3) + focusTotalModifiers
 	}
 
-	thisActor.update({
+	const derivedUpdates = {
 		'system.deathStateApplied': isDead,
 		'system.woundTresholdApplied': isWounded,
 		'system.stats.int.current': curInt,
@@ -263,7 +283,14 @@ function updateDerived(actor) {
 		'system.attackStats.meleeBonus': meleeBonus,
 		'system.attackStats.punch.value': `1d6+${meleeBonus}`,
 		'system.attackStats.kick.value': `1d6+${4 + meleeBonus}`,
-	});
+	};
+
+	if (thisActor.pack && thisActor.updateSource) {
+		thisActor.updateSource(derivedUpdates);
+		return;
+	}
+
+	return thisActor.update(derivedUpdates, updateOptions);
 }
 
 function getArmorEcumbrance(actor) {
@@ -291,7 +318,7 @@ function rollSkillCheck(actor, skillMapEntry) {
 	let skillValue = actor.system.skills[attribute.name][skillName].value;
 	let skill = actor.system.skills[attribute.name][skillName]
 
-	let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+	let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
 	let messageData = {
 		speaker: ChatMessage.getSpeaker({ actor: actor }),
@@ -332,21 +359,9 @@ function rollSkillCheck(actor, skillMapEntry) {
 		rollFormula += !displayRollDetails ? `-${armorEnc}` : `-${armorEnc}[${game.i18n.localize("WITCHER.Armor.EncumbranceValue")}]`
 	}
 
-	let activeEffects = actor.getList("effect").filter(e => e.system.isActive);
-	activeEffects.forEach(item => {
-		item.system.skills.forEach(effectSkill => {
-			if (skillLabel == game.i18n.localize(effectSkill.skill)) {
-				if (effectSkill.modifier.includes("/")) {
-					rollFormula += !displayRollDetails ? `/${Number(effectSkill.modifier.replace("/", ''))}` : `/${Number(effectSkill.modifier.replace("/", ''))}[${item.name}]`
-				}
-				else {
-					rollFormula += !displayRollDetails ? `+${effectSkill.modifier}` : `+${effectSkill.modifier}[${item.name}]`
-				}
-			}
-		})
-	});
+	rollFormula = addActorSkillEffectModifiers(actor, skillMapEntry.label, rollFormula);
 
-	new Dialog({
+	renderApplication(new WitcherDialog({
 		title: `${game.i18n.localize("WITCHER.Dialog.Skill")}: ${skillLabel}`,
 		content: `<label>${game.i18n.localize("WITCHER.Dialog.attackCustom")}: <input name="customModifiers" value=0></label>`,
 		buttons: {
@@ -367,12 +382,20 @@ function rollSkillCheck(actor, skillMapEntry) {
 				}
 			}
 		}
-	}).render(true)
+	}))
 }
 
 function genId() {
 	return randomID(16);
 };
+
+function getActorModifierSources(actor) {
+	return [
+		...(actor.getList?.("effect") ?? Array.from(actor.items ?? []).filter(item => item.type === "effect"))
+			.filter(effect => isActorEffectItemActive(actor, effect)),
+		...getCriticalWoundModifierSources(actor),
+	];
+}
 
 function calc_currency_weight(currency) {
 	let totalPieces = 0;
@@ -387,7 +410,7 @@ function calc_currency_weight(currency) {
 }
 
 function addModifiers(modifiers, formula) {
-	let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+	let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 	modifiers?.forEach(mod => {
 		if (mod.value < 0) {
 			formula += !displayRollDetails ? `${mod.value}` : `${mod.value}[${mod.name}]`
@@ -399,4 +422,10 @@ function addModifiers(modifiers, formula) {
 	return formula;
 }
 
-export { updateDerived, rollSkillCheck, genId, calc_currency_weight, addModifiers };
+export {
+	addModifiers,
+	calc_currency_weight,
+	genId,
+	rollSkillCheck,
+	updateDerived,
+};

@@ -6,18 +6,18 @@ export let skillModifierMixin = {
     let skill = event.currentTarget.closest(".skill").dataset.skill;
     let newModifierList = []
     if (this.actor.system.skills[stat][skill].modifiers) {
-      newModifierList = this.actor.system.skills[stat][skill].modifiers
+      newModifierList = foundry.utils.deepClone(this.actor.system.skills[stat][skill].modifiers)
     }
     newModifierList.push({ id: genId(), name: "Modifier", value: 0 })
 
-    this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: newModifierList });
+    await this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: newModifierList });
   },
 
-  _onSkillModifierDisplay(event) {
+  async _onSkillModifierDisplay(event) {
     event.preventDefault();
     let skill = event.currentTarget.closest(".skill").dataset.skill;
 
-    this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.isOpened`]: !this.actor.system.skills[this.skillMap[skill].attribute.name][skill].isOpened });
+    await this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.isOpened`]: !this.actor.system.skills[this.skillMap[skill].attribute.name][skill].isOpened });
   },
 
   async _onSkillModifierRemove(event) {
@@ -27,9 +27,10 @@ export let skillModifierMixin = {
     let prevModList = this.actor.system.skills[stat][skill].modifiers;
     const newModList = Object.values(prevModList).map((details) => details);
     const idxToRm = newModList.findIndex((v) => v.id === event.target.dataset.id);
+    if (idxToRm < 0) return;
     newModList.splice(idxToRm, 1);
 
-    this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: newModList });
+    await this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: newModList });
   },
 
   async _onSkillModifierEdit(event) {
@@ -41,12 +42,13 @@ export let skillModifierMixin = {
 
     let field = element.dataset.field;
     let value = element.value
-    let modifiers = this.actor.system.skills[stat][skill].modifiers;
+    let modifiers = foundry.utils.deepClone(this.actor.system.skills[stat][skill].modifiers ?? []);
 
     let objIndex = modifiers.findIndex((obj => obj.id == itemId));
+    if (objIndex < 0) return;
     modifiers[objIndex][field] = value
 
-    this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: modifiers });
+    await this.actor.update({ [`system.skills.${this.skillMap[skill].attribute.name}.${skill}.modifiers`]: modifiers });
   },
 
 

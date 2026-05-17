@@ -1,27 +1,39 @@
-<form class="{{cssClass}}" autocomplete="off">
+<form class="{{cssClass}} verbal-combat-dialog" autocomplete="off">
     <h1>{{localize "WITCHER.verbalCombat.Title"}}</h1>
-    <div>
+    <div class="verbal-combat-groups">
+        <section>
         <h2>{{localize "WITCHER.verbalCombat.EmpatheticAttacks"}}</h2>
-            <div><input name="verbalCombat" type="radio" id="Seduce" value="Seduce"/><label for="Seduce">{{localize "WITCHER.verbalCombat.Seduce"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Persuade" value="Persuade"/><label for="Persuade">{{localize "WITCHER.verbalCombat.Persuade"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Appeal" value="Appeal"/><label for="Appeal">{{localize "WITCHER.verbalCombat.Appeal"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Befriend" value="Befriend"/><label for="Befriend">{{localize "WITCHER.verbalCombat.Befriend"}}</label></div>
+            <label><input name="verbalCombat" type="radio" value="Seduce" checked/><span>{{localize "WITCHER.verbalCombat.Seduce"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Persuade"/><span>{{localize "WITCHER.verbalCombat.Persuade"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Appeal"/><span>{{localize "WITCHER.verbalCombat.Appeal"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Befriend"/><span>{{localize "WITCHER.verbalCombat.Befriend"}}</span></label>
+        </section>
+        <section>
         <h2>{{localize "WITCHER.verbalCombat.AntagonisticAttacks"}}</h2>
-            <div><input name="verbalCombat" type="radio" id="Deceive" value="Deceive"/><label for="Deceive">{{localize "WITCHER.verbalCombat.Deceive"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Ridicule" value="Ridicule"/><label for="Ridicule">{{localize "WITCHER.verbalCombat.Ridicule"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Intimidate" value="Intimidate"/><label for="Intimidate">{{localize "WITCHER.verbalCombat.Intimidate"}}</label></div>
+            <label><input name="verbalCombat" type="radio" value="Deceive"/><span>{{localize "WITCHER.verbalCombat.Deceive"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Ridicule"/><span>{{localize "WITCHER.verbalCombat.Ridicule"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Intimidate"/><span>{{localize "WITCHER.verbalCombat.Intimidate"}}</span></label>
+        </section>
+        <section>
         <h2>{{localize "WITCHER.verbalCombat.Defences"}}</h2>
-            <div><input name="verbalCombat" type="radio" id="Ignore" value="Ignore"/><label for="Ignore">{{localize "WITCHER.verbalCombat.Ignore"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Counterargue" value="Counterargue"/><label for="Counterargue">{{localize "WITCHER.verbalCombat.Counterargue"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="ChangeSubject" value="ChangeSubject"/><label for="ChangeSubject">{{localize "WITCHER.verbalCombat.ChangeSubject"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Disengage" value="Disengage"/><label for="Disengage">{{localize "WITCHER.verbalCombat.Disengage"}}</label></div>
+            <label><input name="verbalCombat" type="radio" value="Ignore"/><span>{{localize "WITCHER.verbalCombat.Ignore"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="ChangeSubject"/><span>{{localize "WITCHER.verbalCombat.ChangeSubject"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Disengage"/><span>{{localize "WITCHER.verbalCombat.Disengage"}}</span></label>
+        </section>
+        <section>
         <h2>{{localize "WITCHER.verbalCombat.EmpatheticTools"}}</h2>
-            <div><input name="verbalCombat" type="radio" id="Romance" value="Romance"/><label for="Romance">{{localize "WITCHER.verbalCombat.Romance"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Study" value="Study"/><label for="Study">{{localize "WITCHER.verbalCombat.Study"}}</label></div>
+            <label><input name="verbalCombat" type="radio" value="Romance"/><span>{{localize "WITCHER.verbalCombat.Romance"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Study"/><span>{{localize "WITCHER.verbalCombat.Study"}}</span></label>
+        </section>
+        <section>
         <h2>{{localize "WITCHER.verbalCombat.AntagonisticTools"}}</h2>
-            <div><input name="verbalCombat" type="radio" id="ImplyPersuade" value="ImplyPersuade"/><label for="ImplyPersuade">{{localize "WITCHER.verbalCombat.ImplyPersuade"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="ImplyDeceit" value="ImplyDeceit"/><label for="ImplyDeceit">{{localize "WITCHER.verbalCombat.ImplyDeceit"}}</label></div>
-            <div><input name="verbalCombat" type="radio" id="Bribe" value="Bribe"/><label for="Bribe">{{localize "WITCHER.verbalCombat.Bribe"}}</label></div>
-        <label>{{localize "WITCHER.Dialog.attackCustom"}}: <input name="customModifiers" value=0></label>
+            <label><input name="verbalCombat" type="radio" value="ImplyPersuade"/><span>{{localize "WITCHER.verbalCombat.ImplyPersuade"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="ImplyDeceit"/><span>{{localize "WITCHER.verbalCombat.ImplyDeceit"}}</span></label>
+            <label><input name="verbalCombat" type="radio" value="Bribe"/><span>{{localize "WITCHER.verbalCombat.Bribe"}}</span></label>
+        </section>
+        <div class="verbal-combat-modifiers">
+            <label><span>{{localize "WITCHER.Chat.VerbalRollModifier"}}</span><input type="number" name="customModifiers" value="0" step="1"/></label>
+            <label><span>{{localize "WITCHER.Chat.VerbalDamageModifier"}}</span><input type="number" name="customDamageModifiers" value="0" step="1"/></label>
+        </div>
     </div>
 </form>

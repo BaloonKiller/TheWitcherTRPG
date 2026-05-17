@@ -1,22 +1,17 @@
 import { WITCHER } from "../../../setup/config.js";
+import { WitcherItemSheetV2 } from "../../../setup/foundry-compat.js";
 
-export default class WitcherObstacleSheet extends ItemSheet {
+export default class WitcherObstacleSheet extends WitcherItemSheetV2 {
   /** @override */
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      classes: ["witcher", "sheet", "item"],
+  static DEFAULT_OPTIONS = {
+    position: {
       width: 520,
       height: 480,
-      tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
-      dragDrop: [{
-        dragSelector: ".items-list .item",
-        dropSelector: null
-      }],
-    });
-  }
+    },
+  };
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/investigation/obstacle-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/investigation/obstacle-sheet.hbs`;
   }
 
   /** @override */

@@ -1,59 +1,75 @@
-<table class="valuable-table item-list">
-    <tr>
-        <th></th>
-        <th></th>
-        <th><b>{{localize "WITCHER.table.Quantity"}}</b></th>
-        <th><b>{{localize "WITCHER.table.Name"}}</b></th>
-        <th><b>{{localize "WITCHER.Item.Weight"}}</b></th>
-    </tr>
-    {{#each mounts as |valuable id|}}
-    <tbody class="item" data-item-id="{{valuable._id}}">
+<table class="transport-table item-list">
+    <colgroup>
+        <col class="transport-info-column">
+        <col class="transport-name-column">
+        <col class="transport-kind-column">
+        <col class="transport-control-column">
+        <col class="transport-speed-column">
+        <col class="transport-hp-column">
+        <col class="transport-actions-column">
+    </colgroup>
+    <thead>
+        <tr>
+            <th class="transport-info-column"></th>
+            <th class="transport-name-column">{{localize "WITCHER.table.Name"}}</th>
+            <th>{{localize "WITCHER.Transport.KindLabel"}}</th>
+            <th>{{localize "WITCHER.Mount.Control"}}</th>
+            <th>{{localize "WITCHER.Mount.Speed"}}</th>
+            <th>{{localize "WITCHER.Mount.Hp"}}</th>
+            <th class="transport-actions-column"></th>
+        </tr>
+    </thead>
+    {{#each mounts as |transport|}}
+    <tbody class="item" data-item-id="{{transport._id}}">
         <tr>
             <td>
-                <a class="item-armor-display"><i class="fas fa-info"></i></a>
+                <a class="item-transport-display" title="{{localize 'WITCHER.Item.Description'}}">
+                    <i class="fas fa-info" aria-hidden="true"></i>
+                </a>
+            </td>
+            <td class="transport-name-cell">
+                <img src="{{transport.img}}" class="item-img dragable" draggable="true" data-id="{{transport._id}}" alt="">
+                <input class="inline-edit" data-field="name" type="text" value="{{transport.name}}" title="{{transport.name}}">
+            </td>
+            <td>{{localize (concat "WITCHER.Transport.Kind." transport.system.transportKind)}}</td>
+            <td>{{transport.system.transportControl}}</td>
+            <td>{{transport.system.transportEffectiveSpeed}}</td>
+            <td class="transport-hp-cell">
+                <input class="inline-edit" data-field="system.hpCurrent" type="number"
+                       value="{{transport.system.transportHp.value}}" min="0" max="{{transport.system.transportHp.max}}" data-dtype="Number">
+                <span>/ {{transport.system.transportHp.max}}</span>
             </td>
             <td>
-                <img src="{{valuable.img}}" class="item-img dragable" draggable="true"
-                      data-id="{{valuable._id}}"/>
-            </td>
-            <td>
-                <input class="inline-edit item-quantity" data-field="system.quantity" type="text"
-                        value="{{valuable.system.quantity}}" data-dtype="Number"/>
-            </td>
-            <td>
-                <input class="inline-edit" data-field="name" type="text" value="{{valuable.name}}"
-                        placeholder="name"/>
-            </td>
-            <td>
-                <input class="inline-edit weight-data" data-field="system.weight" type="text"
-                        value="{{valuable.system.weight}}" data-dtype="Number"/>
+                <div class="transport-row-actions">
+                    <a class="transport-cargo" title="{{localize 'WITCHER.Transport.OpenCargo'}}"><i class="fas fa-box-open" aria-hidden="true"></i></a>
+                    <a class="transport-control" title="{{localize 'WITCHER.Transport.ControlCheck'}}"><i class="fas fa-dharmachakra" aria-hidden="true"></i></a>
+                    {{#if (eq transport.system.transportKind "mount")}}
+                    <a class="transport-athletics" title="{{localize 'WITCHER.Transport.AthleticsCheck'}}"><i class="fas fa-horse" aria-hidden="true"></i></a>
+                    {{/if}}
+                    <a class="transport-damage" title="{{localize 'WITCHER.Transport.ApplyDamage'}}"><i class="fas fa-heart-broken" aria-hidden="true"></i></a>
+                    {{#unless (eq transport.system.transportKind "mount")}}
+                    <a class="transport-repair" title="{{localize 'WITCHER.Transport.Repair'}}"><i class="fas fa-tools" aria-hidden="true"></i></a>
+                    {{/unless}}
+                </div>
             </td>
         </tr>
         <tr class="item-info invisible">
-            <td colspan="4">
-                <div class="flex">
-                    <label class="label-info">
-                        <b>{{localize "WITCHER.Mount.Dexterity"}}: </b>
-                    </label>
-                    <div>{{valuable.system.dex}}</div>
-                    <label class="label-info">
-                        <b>{{localize "WITCHER.Mount.Control"}}: </b>
-                    </label>
-                    <div>{{valuable.system.control}}</div>
-                    <label class="label-info">
-                        <b>{{localize "WITCHER.Mount.Speed"}}: </b>
-                    </label>
-                    <div>{{valuable.system.speed}}</div>
-                    <label class="label-info">
-                        <b>{{localize "WITCHER.Mount.Hp"}}: </b>
-                    </label>
-                    <div>{{valuable.system.hp}}</div>
-                </div>
-            </td>
-            <td>
-                <div>
-                    <a class="item-edit"><i class="fas fa-edit"></i></a>
-                    <a class="item-delete"><i class="fas fa-trash-alt"></i></a>
+            <td colspan="7">
+                <div class="transport-detail-row">
+                    <span><b>{{localize "WITCHER.Transport.ControlSkill"}}:</b> {{localize (concat "WITCHER.Transport.Skill." transport.system.transportControlSkill)}}</span>
+                    <span><b>{{localize "WITCHER.Mount.Dexterity"}}:</b> {{transport.system.dex}}</span>
+                    <span><b>{{localize "WITCHER.Transport.Sp"}}:</b> {{transport.system.transportSp}}</span>
+                    {{#if (eq transport.system.transportKind "wagon")}}
+                    <span><b>{{localize "WITCHER.Transport.Occupancy"}}:</b> {{transport.system.transportOccupancy}}</span>
+                    <span><b>{{localize "WITCHER.Transport.ImprovementSlots"}}:</b> {{transport.system.transportImprovementSlots.used}} / {{transport.system.transportImprovementSlots.max}}</span>
+                    {{/if}}
+                    <span><b>{{localize "WITCHER.Transport.Cargo"}}:</b> {{transport.system.transportCargoWeight}} / {{#if transport.system.transportHasCargoCapacity}}{{transport.system.transportCargoCapacity}}{{else}}&mdash;{{/if}} kg</span>
+                    {{#if transport.system.transportPullingAnimalName}}<span><b>{{localize "WITCHER.Transport.Puller"}}:</b> {{transport.system.transportPullingAnimalName}}</span>{{/if}}
+                    <span><b>{{localize "WITCHER.Item.Weight"}}:</b> {{transport.system.weight}} kg</span>
+                    <span class="transport-item-controls">
+                        <a class="item-edit" title="{{localize 'WITCHER.Transport.Edit'}}"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                        <a class="item-delete" title="{{localize 'WITCHER.Transport.Delete'}}"><i class="fas fa-trash-alt" aria-hidden="true"></i></a>
+                    </span>
                 </div>
             </td>
         </tr>

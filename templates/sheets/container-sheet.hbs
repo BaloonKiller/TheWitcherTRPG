@@ -1,32 +1,82 @@
-<form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
-    {{!-- effect Tab --}}
-    <div class="description">
-        <textarea rows=5 name="system.description">{{data.description}}</textarea>
-    </div>
-    {{#each data.itemContent as |storedItem|}}
-    <div class="container-item">
-        <div class="header">
-            <input type="text" value="{{storedItem.name}}" disabled/>
-            <a class="remove-item" data-uuid="{{storedItem.uuid}}"><i class="fa-solid fa-arrow-up-from-bracket"></i></a>
-        </div>
-        <item-content class="item-content">
-            <div class="quantity-weight">
-                <quantity>
-                    <label>{{localize "WITCHER.Item.Quantity"}}</label>
-                    <input type="text" value="{{storedItem.quantity}}" disabled/>
-                </quantity>
-                <weight>
-                    <label>{{localize "WITCHER.Item.Weight"}}</label>
-                    <input type="text" value="{{storedItem.weight}}" disabled/>
-                </weight>
-            </div>
-            <description>
-                <textarea rows=5 disabled>{{storedItem.description}}</textarea>
-            </description>
-        </item-content>
-        
+<form class="{{cssClass}} container-sheet" autocomplete="off">
+    {{> "systems/thewitchertrpg/templates/partials/item-header.hbs"}}
 
-    </div>
-    {{/each}}
+    <section class="container-summary {{#if container.overloaded}}is-overloaded{{/if}}">
+        <label class="container-capacity-field">
+            <span>{{localize "WITCHER.Container.Capacity"}}</span>
+            <span class="container-capacity-input">
+                <input type="number" name="system.capacity" value="{{container.capacity}}" min="0" step="0.1"
+                       placeholder="{{localize 'WITCHER.Container.Unlimited'}}">
+                <span>kg</span>
+            </span>
+        </label>
+        <div class="container-load">
+            <span>{{localize "WITCHER.Container.Load"}}</span>
+            {{#if container.hasCapacity}}
+                <strong>{{container.weight}} / {{container.capacity}} kg</strong>
+            {{else}}
+                <strong>{{container.weight}} kg / {{localize "WITCHER.Container.Unlimited"}}</strong>
+            {{/if}}
+        </div>
+        {{#if container.hasCapacity}}
+            <progress value="{{container.fillPercent}}" max="100"></progress>
+            {{#if container.overloaded}}
+                <p class="container-warning"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    {{localize "WITCHER.Container.Overloaded"}}</p>
+            {{/if}}
+        {{/if}}
+    </section>
+
+    {{#unless container.isOwned}}
+        <p class="container-notice"><i class="fas fa-circle-info" aria-hidden="true"></i>
+            {{localize "WITCHER.Container.OwnedRequired"}}</p>
+    {{/unless}}
+
+    <section class="container-contents">
+        <header>
+            <h2>{{localize "WITCHER.Container.Contents"}}</h2>
+            {{#if container.items}}
+                <button type="button" class="container-unload-all">
+                    <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                    {{localize "WITCHER.Container.UnloadAll"}}
+                </button>
+            {{/if}}
+        </header>
+
+        {{#if container.items}}
+            <div class="container-item-list">
+                {{#each container.items as |storedItem|}}
+                    <article class="container-item" data-uuid="{{storedItem.uuid}}">
+                        <img src="{{storedItem.img}}" alt="{{storedItem.name}}">
+                        <div class="container-item-details">
+                            <strong>{{storedItem.name}}</strong>
+                            <span>{{storedItem.quantity}} &times; {{storedItem.weight}} kg = {{storedItem.totalWeight}} kg</span>
+                        </div>
+                        <div class="container-item-actions">
+                            <button type="button" class="container-contained-edit" data-uuid="{{storedItem.uuid}}"
+                                    title="{{localize 'WITCHER.Container.EditItem'}}">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="container-remove-item" data-uuid="{{storedItem.uuid}}"
+                                    title="{{localize 'WITCHER.Container.Unload'}}">
+                                <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </article>
+                {{/each}}
+            </div>
+        {{else}}
+            <p class="container-empty">{{localize "WITCHER.Container.Empty"}}</p>
+        {{/if}}
+
+        {{#if container.isOwned}}
+            <p class="container-drop-hint"><i class="fas fa-hand" aria-hidden="true"></i>
+                {{localize "WITCHER.Container.DropHint"}}</p>
+        {{/if}}
+    </section>
+
+    <section class="container-description">
+        <label>{{localize "WITCHER.Item.Description"}}</label>
+        <textarea rows="5" name="system.description">{{data.description}}</textarea>
+    </section>
 </form>

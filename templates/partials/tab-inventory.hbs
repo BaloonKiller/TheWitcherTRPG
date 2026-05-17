@@ -10,66 +10,55 @@
 </div>
 <div class="flex">
     <div class="weapon-section">
-        <div class="flex">
+        <div class="currency-list">
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.bizant"}}</label>
-                <input class="small-medium"
-                       name="system.currency.bizant"
-                       type="number"
-                       value="{{system.currency.bizant}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.bizant}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="bizant" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.ducat"}}</label>
-                <input class="small-medium"
-                       name="system.currency.ducat"
-                       type="number"
-                       value="{{system.currency.ducat}}"
-                       placeholder="0"
-                       data-dtype="Number"/></div>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.ducat}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="ducat" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
+            </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.lintar"}}</label>
-                <input class="small-medium"
-                       name="system.currency.lintar"
-                       type="number"
-                       value="{{system.currency.lintar}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.lintar}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="lintar" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.floren"}}</label>
-                <input class="small-medium"
-                       name="system.currency.floren"
-                       type="number"
-                       value="{{system.currency.floren}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.floren}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="floren" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.crown"}}</label>
-                <input class="small-medium"
-                       name="system.currency.crown"
-                       type="number"
-                       value="{{system.currency.crown}}"
-                       placeholder="0"
-                       data-dtype="Number"/></div>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.crown}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="crown" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
+            </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.oren"}}</label>
-                <input class="small-medium"
-                       name="system.currency.oren"
-                       type="number"
-                       value="{{system.currency.oren}}"
-                       placeholder="0"
-                       data-dtype="Number"/></div>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.oren}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="oren" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
+            </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.falsecoin"}}</label>
-                <input class="small-medium"
-                       name="system.currency.falsecoin"
-                       type="number"
-                       value="{{system.currency.falsecoin}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.falsecoin}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="falsecoin" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
         </div>
 
@@ -96,7 +85,7 @@
                         <a class="item-weapon-display"><i class="fas fa-info"></i></a>
                     </td>
                     <td style="text-align:left;">
-                      {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=weapon}}
+                      {{> "systems/thewitchertrpg/templates/partials/item-image.hbs" item=weapon}}
                     </td>
                     <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
                                value="{{weapon.system.quantity}}" data-dtype="Number"/></td>
@@ -219,10 +208,10 @@
                 <td><b>{{localize "WITCHER.table.Quantity"}}</b></td>
                 <td><b>{{localize "WITCHER.table.Name"}}</b></td>
                 <td><b>{{localize "WITCHER.table.Equipped"}}</b></td>
-                <td><b>{{localize "WITCHER.table.StoppingPower"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResBludgeon"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResSlashing"}}</b></td>
-                <td><b>{{localize "WITCHER.table.ResPiercing"}}</b></td>
+                <td class="armor-sp-cell"><b>{{localize "WITCHER.table.StoppingPower"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResBludgeon"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResSlashing"}}</b></td>
+                <td class="armor-resistance-cell"><b>{{localize "WITCHER.table.ResPiercing"}}</b></td>
                 <td></td>
             </tr>
             {{#each armors as |armor id|}}
@@ -232,7 +221,7 @@
                         <a class="item-armor-display"><i class="fas fa-info"></i></a>
                     </td>
                     <td>
-                      {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=armor}}
+                      {{> "systems/thewitchertrpg/templates/partials/item-image.hbs" item=armor}}
                     </td>
                     <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
                                value="{{armor.system.quantity}}" data-dtype="Number"/></td>
@@ -243,7 +232,7 @@
                     {{/if}}
                     {{#unless (eq type "enhancement")}}
                         <td><input class="inline-edit" data-field="system.equipped" type="checkbox" value={{armor.system.equipped}} {{checked armor.system.equipped}}/></td>
-                        <td>
+                        <td class="armor-sp-cell">
                             {{#if (eq armor.system.location "Head")}}
                                 <div class="flex sp">
                                     <div class="icon-spacer"></div>
@@ -349,10 +338,10 @@
 
                         </td>
                     {{/unless}}
-                    <td><input type="checkbox" name="system.bludgeoning" {{checked armor.system.bludgeoning}} disabled/>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.bludgeoning" {{checked armor.system.bludgeoning}} disabled/>
                     </td>
-                    <td><input type="checkbox" name="system.slashing" {{checked armor.system.slashing}} disabled/></td>
-                    <td><input type="checkbox" name="system.Piercing" {{checked armor.system.piercing}} disabled/></td>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.slashing" {{checked armor.system.slashing}} disabled/></td>
+                    <td class="armor-resistance-cell"><input type="checkbox" name="system.Piercing" {{checked armor.system.piercing}} disabled/></td>
 
                 </tr>
                 <tr class="item-info invisible">
@@ -456,42 +445,48 @@
 
         {{#if questItems}}
         <h3>{{localize "WITCHER.Valuable.QuestItem"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=questItems}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=questItems}}
         {{/if}}
 
         {{#if general}}
         <h3>{{localize "WITCHER.Valuable.General"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=general}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=general}}
         {{/if}}
 
         {{#if foodAndDrinks}}
         <h3>{{localize "WITCHER.Valuable.Food&Drinks"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=foodAndDrinks}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=foodAndDrinks}}
         {{/if}}
 
         {{#if toolkits}}
         <h3>{{localize "WITCHER.Valuable.Toolkit"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=toolkits}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=toolkits}}
         {{/if}}
 
         {{#if clothingAndContainers}}
         <h3>{{localize "WITCHER.Valuable.Clothings"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=clothingAndContainers}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=clothingAndContainers}}
         {{/if}}
 
+        <h3>{{localize "WITCHER.Valuable.Containers"}}
+            <a class="add-item" data-itemType="container" title="{{localize 'WITCHER.Container.Add'}}">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+            </a>
+        </h3>
         {{#if containers}}
-        <h3>{{localize "WITCHER.Valuable.Containers"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=containers}}
+            {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=containers}}
         {{/if}}
 
-        {{#if mounts}}
-        <h3>{{localize "WITCHER.Inventory.Mounts"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-mounts.hbs" mounts=mounts}}
-        {{/if}}
+        <h2>{{localize "WITCHER.Inventory.Mounts"}}
+            <a class="add-item" data-itemType="mount" title="{{localize 'WITCHER.Transport.Add'}}">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+            </a>
+        </h2>
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-mounts.hbs" mounts=mounts}}
 
         {{#if mountAccessories}}
-        <h3>{{localize "WITCHER.Valuable.MountAccessories"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-valuables.hbs" valuables=mountAccessories}}
+        <h3>{{localize "WITCHER.Transport.UnassignedEquipment"}}</h3>
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-valuables.hbs" valuables=mountAccessories}}
         {{/if}}
 
         <h2>{{localize  "WITCHER.Inventory.Diagrams"}}
@@ -499,64 +494,77 @@
                 <i class="fas fa-plus"></i>
             </a>
         </h2>
+        <div class="recipe-memory-summary">
+            <span><b>{{localize "WITCHER.Diagram.Memory"}}:</b> {{recipeMemoryCount}} / {{recipeMemoryCapacity}}</span>
+            <label title="{{localize "WITCHER.Diagram.MemoryBonusHint"}}">
+                {{localize "WITCHER.Diagram.MemoryBonus"}}
+                <input type="number" name="system.recipeMemoryBonus" min="0" step="1"
+                       value="{{system.recipeMemoryBonus}}" data-dtype="Number"/>
+            </label>
+        </div>
         {{#if alchemicalItemDiagrams}}
         <h3>{{localize "WITCHER.Inventory.AlchemicalItemDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=alchemicalItemDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=alchemicalItemDiagrams}}
         {{/if}}
 
         {{#if oilDiagrams}}
         <h3>{{localize "WITCHER.Inventory.OilDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=oilDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=oilDiagrams}}
         {{/if}}
 
         {{#if potionDiagrams}}
         <h3>{{localize "WITCHER.Inventory.PotionDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=potionDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=potionDiagrams}}
         {{/if}}
 
         {{#if decoctionDiagrams}}
         <h3>{{localize "WITCHER.Inventory.DecoctionDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=decoctionDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=decoctionDiagrams}}
         {{/if}}
 
         {{#if ingredientDiagrams}}
         <h3>{{localize "WITCHER.Inventory.IngredientDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=ingredientDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=ingredientDiagrams}}
         {{/if}}
 
         {{#if ammunitionDiagrams}}
         <h3>{{localize "WITCHER.Inventory.AmmunitionDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=ammunitionDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=ammunitionDiagrams}}
         {{/if}}
 
         {{#if weaponDiagrams}}
         <h3>{{localize "WITCHER.Inventory.WeaponDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=weaponDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=weaponDiagrams}}
         {{/if}}
 
         {{#if armorDiagrams}}
         <h3>{{localize "WITCHER.Inventory.ArmorDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=armorDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=armorDiagrams}}
+        {{/if}}
+
+        {{#if armorEnhancementDiagrams}}
+        <h3>{{localize "WITCHER.Diagram.ArmorEnhancement"}}</h3>
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=armorEnhancementDiagrams}}
         {{/if}}
 
         {{#if elderfolkWeaponDiagrams}}
         <h3>{{localize "WITCHER.Inventory.ElderfolkWeaponDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=elderfolkWeaponDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=elderfolkWeaponDiagrams}}
         {{/if}}
 
         {{#if elderfolkArmorDiagrams}}
         <h3>{{localize "WITCHER.Inventory.ElderfolkArmorDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=elderfolkArmorDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=elderfolkArmorDiagrams}}
         {{/if}}
 
         {{#if bombDiagrams}}
         <h3>{{localize "WITCHER.Inventory.BombDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=bombDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=bombDiagrams}}
         {{/if}}
 
         {{#if trapDiagrams}}
         <h3>{{localize "WITCHER.Inventory.TrapDiagrams"}}</h3>
-        {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-diagrams.hbs" diagrams=trapDiagrams}}
+        {{> "systems/thewitchertrpg/templates/partials/tab-inventory-diagrams.hbs" diagrams=trapDiagrams}}
         {{/if}}
     </div>
 
@@ -584,7 +592,7 @@
                         <a class="item-armor-display"><i class="fas fa-info"></i></a>
                     </td>
                     <td>
-                        {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=valuable}}
+                        {{> "systems/thewitchertrpg/templates/partials/item-image.hbs" item=valuable}}
                     </td>
                     <td>
                         <input class="inline-edit item-quantity" data-field="system.quantity" type="text"
@@ -680,15 +688,6 @@
                             <a class="item-delete"><i class="fas fa-trash-alt"></i></a>
                         </div>
                     </td>
-                    <td>
-                      {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=diagram}}
-                    </td>
-                    <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
-                               value="{{diagram.system.quantity}}" data-dtype="Number"/></td>
-                    <td><input class="inline-edit" data-field="name" type="text" value="{{diagram.name}}"
-                               placeholder="name"/></td>
-                    <td><input class="inline-edit" data-field="system.learned" type="checkbox"
-                               value="{{diagram.system.learned}}" {{checked diagram.system.learned}}/>
                 </tr>
             </tbody>
             {{/each}}
@@ -847,7 +846,7 @@
         {{/if}}
 
         <div>
-            {{> "systems/TheWitcherTRPG/templates/partials/substances.hbs"}}
+            {{> "systems/thewitchertrpg/templates/partials/substances.hbs"}}
         </div>
 
         <h2>
@@ -871,7 +870,7 @@
                 <tbody class="item" data-item-id="{{component._id}}">
                     <tr>
                         <td>
-                          {{> "systems/TheWitcherTRPG/templates/partials/item-image.hbs" item=component}}
+                          {{> "systems/thewitchertrpg/templates/partials/item-image.hbs" item=component}}
                         </td>
                         <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
                                    value="{{component.system.quantity}}" data-dtype="Number"/></td>
@@ -986,11 +985,11 @@
             <h2>{{localize  "WITCHER.Inventory.RunesAndGlyphs"}}</h2>
             {{#if runeItems}}
             <h3>{{localize  "WITCHER.Inventory.Runes"}}</h3>
-            {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-runes-glyphs.hbs" enhancements=runeItems}}
+            {{> "systems/thewitchertrpg/templates/partials/tab-inventory-runes-glyphs.hbs" enhancements=runeItems}}
             {{/if}}
             {{#if glyphItems}}
             <h3>{{localize  "WITCHER.Inventory.Glyphs"}}</h3>
-            {{> "systems/TheWitcherTRPG/templates/partials/tab-inventory-runes-glyphs.hbs" enhancements=glyphItems}}
+            {{> "systems/thewitchertrpg/templates/partials/tab-inventory-runes-glyphs.hbs" enhancements=glyphItems}}
             {{/if}}
         </div>
     </div>

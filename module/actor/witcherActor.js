@@ -1,7 +1,9 @@
-import { getRandomInt } from "../scripts/witcher.js";
+import { getRandomInt, sumItemProperty } from "../scripts/witcher.js";
 import { WITCHER } from "../setup/config.js";
+import { ActorDocument } from "../setup/foundry-compat.js";
+import { getMemorizedRecipeCount, getRecipeMemoryCapacity, getRecipeMemoryKey } from "../scripts/craftingRecipes.mjs";
 
-export default class WitcherActor extends Actor {
+export default class WitcherActor extends ActorDocument {
 
   prepareDerivedData() {
     super.prepareDerivedData()
@@ -16,7 +18,7 @@ export default class WitcherActor extends Actor {
         .map(effect => WITCHER.armorEffects.find(armorEffect => armorEffect.id == effect.statusEffect))
 
       armorEffects.forEach(effect => {
-        if (effect.refersStatusEffect && !effect.addsResistance && !this.statuses.find(status => status == effect.id)) {
+        if (effect?.refersStatusEffect && !effect.addsResistance && !this.statuses.has(effect.id)) {
           this.toggleStatusEffect(effect.id);
         }
       });
@@ -37,8 +39,16 @@ export default class WitcherActor extends Actor {
   }
 
   getControlledToken() {
-    let tokens = game.canvas.tokens.controlled
-    return tokens.length > 0 ? tokens[0].document : game.user.character?.token
+    const controlledToken = canvas.tokens?.controlled?.find(token =>
+      token.actor?.id === this.id
+      || token.document?.actorId === this.id
+      || token.actor?.uuid === this.uuid
+    );
+
+    return controlledToken
+      ?? this.getActiveTokens?.()[0]
+      ?? (game.user.character?.id === this.id ? game.user.character.getActiveTokens?.()[0] : null)
+      ?? null;
   }
 
   getDamageFlags() {
@@ -74,10 +84,11 @@ export default class WitcherActor extends Actor {
   isEnoughThrowableWeapon(item) {
     if (item.system.isThrowable) {
       let throwableItems = this.items.filter(w => w.type == "weapon" && w.name == item.name);
+      if (!throwableItems.length) return false;
 
-      let quantity = throwableItems[0].system.quantity >= 0 ?
-        throwableItems[0].system.quantity :
-        throwableItems.sum("quantity");
+      let quantity = Number(throwableItems[0].system.quantity) >= 0 ?
+        Number(throwableItems[0].system.quantity) :
+        sumItemProperty(throwableItems, "quantity");
       return quantity > 0
     } else {
       return false
@@ -90,6 +101,26 @@ export default class WitcherActor extends Actor {
 
   getList(name) {
     return this.items.filter(i => i.type == name && !i.system.isStored)
+  }
+
+  getAvailableRecipes() {
+    return this.items.filter(item => item.type === "diagrams" && item.canCraftRecipe());
+  }
+
+  getMemorizedRecipeCount() {
+    return getMemorizedRecipeCount(this.items);
+  }
+
+  getRecipeMemoryCapacity() {
+    return getRecipeMemoryCapacity(this.system);
+  }
+
+  canMemorizeRecipe(item) {
+    return Boolean(item?.system?.learned)
+      || this.items.some(recipe => recipe.type === "diagrams"
+        && recipe.system.learned
+        && getRecipeMemoryKey(recipe) === getRecipeMemoryKey(item))
+      || this.getMemorizedRecipeCount() < this.getRecipeMemoryCapacity();
   }
 
   // Find needed component in the items list based on the component name or based on the exact name of the substance in the players compendium
@@ -126,13 +157,22 @@ export default class WitcherActor extends Actor {
   }
 
   async removeItem(itemId, quantityToRemove) {
-    let foundItem = this.items.get(itemId)
-    let newQuantity = foundItem.system.quantity - quantityToRemove
-    if (newQuantity <= 0) {
-      await this.items.get(itemId).delete()
+    const foundItem = this.items.get(itemId)
+    const availableQuantity = Number(foundItem?.system.quantity);
+    const requestedQuantity = Number(quantityToRemove);
+    if (!foundItem || !Number.isFinite(availableQuantity) || !Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+      return false;
+    }
+
+    let newQuantity = availableQuantity - Math.min(requestedQuantity, availableQuantity)
+    if (newQuantity <= 0 && foundItem.type === "diagrams" && foundItem.system.learned) {
+      await foundItem.update({ 'system.quantity': 0 })
+    } else if (newQuantity <= 0) {
+      await foundItem.delete()
     } else {
       await foundItem.update({ 'system.quantity': newQuantity })
     }
+    return true;
   }
 
   getLocationObject(location) {

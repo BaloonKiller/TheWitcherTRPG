@@ -1,6 +1,7 @@
 import coreStats from "./templates/common/stats/coreStatsData.js";
 import critWound from "./templates/common/critWoundData.js";
 import currency from "./templates/common/currencyData.js"
+import currencyLedgerEntry from "./templates/common/currencyLedgerEntryData.js";
 import derivedStats from "./templates/common/stats/derivedStatsData.js";
 import reputation from "./templates/common/reputationData.js";
 import stats from "./templates/common/stats/statsData.js";
@@ -17,9 +18,11 @@ export default class CommonActorData extends foundry.abstract.TypeDataModel {
     static defineSchema() {
       return {
           currency: new fields.SchemaField(currency()),
+          currencyLedger: new fields.ArrayField(new fields.SchemaField(currencyLedgerEntry())),
           woundTresholdApplied: new fields.BooleanField({initial: false}),
           deathStateApplied: new fields.BooleanField({initial: false}),
           deathSaves: new fields.NumberField({initial: 0}),
+          deathSaveFailed: new fields.BooleanField({initial: false}),
           critWounds: new fields.ArrayField(new fields.SchemaField(critWound())),
 
           stats: new fields.SchemaField(stats()),

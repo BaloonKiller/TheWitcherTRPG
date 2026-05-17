@@ -35,69 +35,55 @@
         </div>
     </div>
     <div class="item-section">
-        <div class="flex">
+        <div class="currency-list">
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.bizant"}}</label>
-                <input class="small-medium"
-                       name="system.currency.bizant"
-                       type="number"
-                       value="{{system.currency.bizant}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.bizant}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="bizant" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.ducat"}}</label>
-                <input class="small-medium"
-                       name="system.currency.ducat"
-                       type="number"
-                       value="{{system.currency.ducat}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.ducat}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="ducat" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.lintar"}}</label>
-                <input class="small-medium"
-                       name="system.currency.lintar"
-                       type="number"
-                       value="{{system.currency.lintar}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.lintar}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="lintar" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.floren"}}</label>
-                <input class="small-medium"
-                       name="system.currency.floren"
-                       type="number"
-                       value="{{system.currency.floren}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.floren}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="floren" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.crown"}}</label>
-                <input class="small-medium"
-                       name="system.currency.crown"
-                       type="number"
-                       value="{{system.currency.crown}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.crown}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="crown" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.oren"}}</label>
-                <input class="small-medium"
-                       name="system.currency.oren"
-                       type="number"
-                       value="{{system.currency.oren}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.oren}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="oren" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
             <div class="currency">
                 <label>{{localize "WITCHER.Currency.falsecoin"}}</label>
-                <input class="small-medium"
-                       name="system.currency.falsecoin"
-                       type="number"
-                       value="{{system.currency.falsecoin}}"
-                       placeholder="0"
-                       data-dtype="Number"/>
+                <div class="currency-readonly">
+                    <input class="small-medium" type="number" value="{{system.currency.falsecoin}}" placeholder="0" readonly disabled/>
+                    <a class="currency-ledger-open" data-currency="falsecoin" title='{{localize "WITCHER.CurrencyLedger.Title"}}'><i class="fas fa-book"></i></a>
+                </div>
             </div>
         </div>
         <h2>{{localize "WITCHER.Loot.Weapons"}} <a class="add-item" data-itemType="weapon"><i
@@ -113,41 +99,45 @@
                 <td class="table-empty-end-space"></td>
             </tr>
             {{#each weapons as |item id|}}
-                {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+                {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
         <h2>{{localize "WITCHER.Loot.Armors"}} <a class="add-item" data-itemType="armor"><i class="fas fa-plus"></i></a>
         </h2>
         <table class="item-table item-list">
             {{#each armors as |item id|}}
-                {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+                {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
         <h2>{{localize "WITCHER.Loot.Valuables"}} <a class="add-item" data-itemType="valuable"><i
                 class="fas fa-plus"></i></a></h2>
         <table class="item-table item-list">
             {{#each valuables as |item id|}}
-                {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+                {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
         <h2>{{localize "WITCHER.Loot.Components"}} <a class="add-item" data-itemType="component"><i
                 class="fas fa-plus"></i></a></h2>
         <table class="item-table item-list">
             {{#each allComponents as |item id|}}
-                {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+                {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
 
         <h2>{{localize "WITCHER.Loot.Runes"}} & {{localize "WITCHER.Loot.Glyphs"}}</h2>
         <table class="item-table item-list">
             {{#each enhancements as |item id|}}
-            {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+            {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
-        <h2>{{localize "WITCHER.Loot.Name"}}</h2>
+        <h2>{{localize "WITCHER.Loot.Name"}}
+            <a class="add-item" data-itemType="container" title="{{localize 'WITCHER.Container.Add'}}">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+            </a>
+        </h2>
         <table class="item-table item-list">
             {{#each loot as |item id|}}
-            {{> "systems/TheWitcherTRPG/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
+            {{> "systems/thewitchertrpg/templates/partials/loot-item-display.hbs" item=item isGM=../isGM}}
             {{/each}}
         </table>
     </div>

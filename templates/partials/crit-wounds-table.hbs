@@ -34,14 +34,34 @@
                         {{/select}}
                     </select>
                     <a class="delete-crit"><i class="fas fa-trash-alt" data-id="{{critWound.id}}"></i></a>
-                    <div class="critwounds-second-line">
-                        <label class="healing-time-lable">{{localize "WITCHER.CritWound.HealingTime.Label"}}:</label>
-                        <input class="days-healed" name="system.critWounds.{{i}}.daysHealed" type="number"
-                               data-dtype="Number" value="{{critWound.daysHealed}}"/>
-                        /
-                        <input class="healing-time" name="system.critWounds.{{i}}.healingTime" type="number"
-                               data-dtype="Number" value="{{critWound.healingTime}}"/>
-                    </div>
+                    {{#if (eq critWound.mod "Treated")}}
+                        {{#if critWound.isPermanent}}
+                            <div class="critwounds-second-line healing-permanent">
+                                {{localize "WITCHER.CritWound.HealingTime.Permanent"}}
+                                <input hidden name="system.critWounds.{{i}}.daysHealed" type="number"
+                                       data-dtype="Number" value="0"/>
+                                <input hidden name="system.critWounds.{{i}}.healingTime" type="number"
+                                       data-dtype="Number" value="0"/>
+                            </div>
+                        {{else}}
+                            <div class="critwounds-second-line">
+                                <label class="healing-time-lable">{{localize "WITCHER.CritWound.HealingTime.Label"}}:</label>
+                                <input class="days-healed" name="system.critWounds.{{i}}.daysHealed" type="number"
+                                       min="0" data-dtype="Number" value="{{critWound.daysHealed}}"/>
+                                /
+                                <input class="healing-time" name="system.critWounds.{{i}}.healingTime" type="number"
+                                       min="1" data-dtype="Number" value="{{critWound.healingTime}}"/>
+                            </div>
+                        {{/if}}
+                    {{else}}
+                        <div class="critwounds-second-line healing-pending">
+                            {{localize "WITCHER.CritWound.HealingTime.Pending"}}
+                            <input hidden name="system.critWounds.{{i}}.daysHealed" type="number"
+                                   data-dtype="Number" value="{{critWound.daysHealed}}"/>
+                            <input hidden name="system.critWounds.{{i}}.healingTime" type="number"
+                                   data-dtype="Number" value="{{critWound.healingTime}}"/>
+                        </div>
+                    {{/if}}
                     <textarea rows=3 name="system.critWounds.{{i}}.notes">{{critWound.notes}}</textarea>
                 </div>
                 <div class="critwounds-right">

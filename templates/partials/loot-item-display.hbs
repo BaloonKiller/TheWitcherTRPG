@@ -7,13 +7,34 @@
 {{else}}
     <tr class="item" data-item-id="{{item._id}}">
 {{/if}}
-    <td><a class="item-edit"><i class="fas fa-edit"></i></a></td>
+    <td>
+        <a class="item-edit"><i class="fas fa-edit"></i></a>
+        {{#if (eq item.type "container")}}
+            <a class="container-contents-open" title="{{localize 'WITCHER.Container.OpenContents'}}">
+                <i class="fas fa-box-open" aria-hidden="true"></i>
+            </a>
+        {{/if}}
+    </td>
     <td><img src="{{item.img}}" class="item-img dragable" draggable="true" data-id="{{item._id}}"/></td>
-    <td><input class="inline-edit item-quantity" data-field="system.quantity" type="text"
-               value="{{item.system.quantity}}" data-dtype="Number"/></td>
+    <td>
+        {{#if (eq item.type "container")}}
+            <span>1</span>
+        {{else}}
+            <input class="inline-edit item-quantity" data-field="system.quantity" type="text"
+                   value="{{item.system.quantity}}" data-dtype="Number"/>
+        {{/if}}
+    </td>
     <td><input class="inline-edit" data-field="name" type="text" value="{{item.name}}" placeholder="name"/></td>
-    <td><input class="inline-edit Weight-info" data-field="system.weight" type="text" value="{{item.system.weight}}"
-               placeholder=""/></td>
+    <td>
+        {{#if (eq item.type "container")}}
+            <span class="Weight-info" title="{{localize 'WITCHER.Container.TotalWeight'}}">
+                <strong>{{item.system.containerTotalWeight}} kg</strong>
+            </span>
+        {{else}}
+            <input class="inline-edit Weight-info" data-field="system.weight" type="text" value="{{item.system.weight}}"
+                   placeholder=""/>
+        {{/if}}
+    </td>
     <td><input class="inline-edit cost-info" data-field="system.cost" type="text" value="{{item.system.cost}}"
                data-dtype="Number"/></td>
     <td><a class="item-buy"><i class="fas fa-coins"></i></a>

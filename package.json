@@ -5,6 +5,8 @@
     },
     "scripts": {
         "build:db": "node ./utils/packs.mjs package pack",
-        "test": "node ./utils/second.mjs "
+        "audit:images": "node ./utils/audit-compendium-images.mjs",
+        "localization:sync-pl": "node ./utils/sync-polish-fallbacks.mjs",
+        "test": "node ./utils/validate-project.mjs"
     }
 }

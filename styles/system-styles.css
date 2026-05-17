@@ -16,6 +16,130 @@
 
 
 /* Navigation tabs */
+.application.witcher.sheet.theme-light {
+  --color-text-primary: #191813;
+  --input-height: var(--form-field-height);
+  color: #191813;
+  font-size: var(--font-size-14);
+  line-height: normal;
+}
+
+.application.witcher.sheet .window-content {
+  overflow: hidden auto;
+  color: #191813;
+}
+
+/* Restore the compact, parchment-friendly table layout that V1 applied to .app sheets. */
+.application.witcher.sheet table:not(.monster-info) {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(0, 0, 0, 0.05);
+  border-top: 1px solid var(--color-border-light-tertiary);
+  border-bottom: 1px solid var(--color-border-light-tertiary);
+  margin: 0.5em 0;
+}
+
+.application.witcher.sheet table:not(.monster-info) tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Item sheets wrap every visible row in its own tbody. The implicit header tbody is
+   first, so the first item group is even and must receive the lighter stripe. */
+.application.witcher.sheet table.item-list > tbody.item:nth-of-type(even) > tr:first-child {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.application.witcher.sheet table.item-list > tbody.item:nth-of-type(odd) > tr:first-child {
+  background-color: transparent;
+}
+
+.application.witcher.sheet table:not(.monster-info) td:first-child {
+  padding-left: 2px;
+}
+
+.application.witcher.sheet table:not(.monster-info) td,
+.application.witcher.sheet table:not(.monster-info) th {
+  padding: 0.25em 0;
+}
+
+/* Foundry's light V2 theme hides the check mark on disabled, checked inputs. */
+.application.witcher.sheet input[type="checkbox"]:disabled {
+  opacity: 1;
+}
+
+.application.witcher.sheet input[type="checkbox"]:disabled::before {
+  box-sizing: border-box;
+  content: "";
+  display: inline-block;
+  border: 2px solid #4b3d55;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.application.witcher.sheet input[type="checkbox"]:disabled:checked::before {
+  content: "\f00c";
+  position: static;
+  background: #4b3d55;
+  color: #fff;
+  font-family: var(--font-awesome);
+  font-weight: 900;
+  text-align: center;
+}
+
+.application.witcher.sheet input[type="checkbox"]:disabled::after {
+  content: none;
+  display: none;
+}
+
+.application.witcher.sheet input[type="text"],
+.application.witcher.sheet input[type="number"],
+.application.witcher.sheet input[type="password"],
+.application.witcher.sheet input[type="date"],
+.application.witcher.sheet input[type="time"],
+.application.witcher.sheet input[type="search"] {
+  padding: 1px 3px;
+}
+
+.application.witcher.sheet input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.application.witcher.sheet input[type="number"]::-webkit-inner-spin-button,
+.application.witcher.sheet input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.application.witcher.sheet .editor {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.application.witcher.sheet .editor-content {
+  height: 100%;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.application.witcher.sheet .editor-edit {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  top: 5px;
+  right: 5px;
+  padding: 1px 2px;
+  background: rgba(187, 187, 187, 0.75);
+  border: 1px solid var(--color-border-dark-1);
+  border-radius: 4px;
+  box-shadow: 0 0 1px var(--color-shadow-dark);
+  font-size: 1.25em;
+}
+
+.application.witcher.sheet .editor:hover .editor-edit {
+  display: block;
+}
+
 .sheet nav.sheet-tabs {
   height: 32px;
   flex: 0 0 32px;
@@ -28,10 +152,25 @@
   text-align: center;
 }
 
+.sheet nav.sheet-tabs a {
+  color: #f4efe2;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.sheet nav.sheet-tabs a:hover,
+.sheet nav.sheet-tabs a.active {
+  color: #ffffff;
+}
+
 /* Sheet min widths */
 .witcher.sheet.actor {
   min-width: 555px;
   min-height: 400px;
+}
+
+.witcher.sheet.actor.monster {
+  min-width: 1180px;
 }
 
 .witcher.sheet.item {
@@ -319,6 +458,32 @@ input.stopping-info {
   width: 75px
 }
 
+.recipe-memory-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 4px 8px;
+}
+
+.recipe-memory-summary label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-memory-summary input {
+  width: 42px;
+}
+
+.recipe-memory-status {
+  text-align: center;
+}
+
+.recipe-source {
+  margin: 6px 0;
+}
+
 input.weight-data {
   width: 30px;
 }
@@ -469,4 +634,19 @@ input.skill-value {
 
 .stat-display .stat-modifier-display {
   width: 15px;
+}
+
+.witcher-defence-dialog .dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.witcher-defence-dialog .dialog-buttons > button {
+  flex: 1 1 118px;
+  min-width: 0;
+  min-height: 34px;
+  height: auto;
+  line-height: 1.2;
+  white-space: normal;
 }

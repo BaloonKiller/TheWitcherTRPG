@@ -1,5 +1,5 @@
 <form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
     <details class="description">
         <summary>{{localize "WITCHER.Item.Description"}}</summary>
         <textarea rows=5 name="system.description">{{item.system.description}}</textarea>
@@ -162,6 +162,7 @@
                 <th>{{localize "WITCHER.Item.Effect"}}</th>
                 <th>{{localize "WITCHER.Item.statusEffect"}}</th>
                 <th><label>{{localize "WITCHER.Percentage"}}</label></th>
+                <th><label>{{localize "WITCHER.Effect.DurationRounds"}}</label></th>
             </tr>
             {{#each item.system.effects as |effect name|}}
                 <tr>
@@ -181,6 +182,10 @@
                     <td class="list-item" data-id="{{effect.id}}">
                         <input class="list-edit" data-field="percentage" type="number" placeholder="%"
                             value="{{effect.percentage}}" data-dtype="Number" />
+                    </td>
+                    <td class="list-item" data-id="{{effect.id}}">
+                        <input class="list-edit" data-field="durationRounds" type="number" min="0"
+                            value="{{effect.durationRounds}}" data-dtype="Number" />
                     </td>
                 </tr>
             {{/each}}

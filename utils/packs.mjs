@@ -20,6 +20,10 @@ import yargs from 'yargs';
 import path from 'path';
 import { compilePack, extractPack } from '@foundryvtt/foundryvtt-cli';
 import { hideBin } from 'yargs/helpers';
+
+if (typeof globalThis.structuredClone !== 'function') {
+    globalThis.structuredClone = (value) => JSON.parse(JSON.stringify(value));
+}
 /**
  * Folder where the compiled compendium packs should be located relative to the
  * base 5e system folder.
@@ -96,7 +100,7 @@ async function compilePacks(packName) {
         const src = path.join(PACK_SRC, folder.name);
         const dest = path.join(PACK_DEST, folder.name);
         console.log(`Compiling pack ${folder.name}`);
-        await compilenode ./utils/packs.mjs package unpackPack(src, dest, { recursive: true, log: true, transformEntry: cleanPackEntry });
+        await compilePack(src, dest, { recursive: true, log: true, transformEntry: cleanPackEntry });
     }
 }
 
@@ -205,7 +209,8 @@ function slugify(name) {
 function cleanPackEntry(data, { clearSourceId = true, ownership = 0 } = {}) {
     if (data.ownership) data.ownership = { default: ownership };
     if (clearSourceId) delete data.flags?.core?.sourceId;
-    if (data._stats?.lastModifiedBy) data._stats.lastModifiedBy = 'github';
+    // Foundry VTT 14 validates this as a 16-character document ID.
+    if (data._stats?.lastModifiedBy) data._stats.lastModifiedBy = 'github0000000000';
 
     // Remove empty entries in flags
     if (!data.flags) data.flags = {};

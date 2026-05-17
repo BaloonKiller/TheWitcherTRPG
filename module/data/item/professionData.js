@@ -12,7 +12,7 @@ export default class ProfessionData extends CommonItemData {
       return {
         // Using destructuring to effectively append our additional data here
         ...commonData,
-        notes: new fields.StringField({initial: ''}),
+        notes: new fields.HTMLField({initial: ''}),
         definingSkill: new fields.SchemaField(professionSkill()),
         skillPath1: new fields.SchemaField(professionPath()),
         skillPath2: new fields.SchemaField(professionPath()),

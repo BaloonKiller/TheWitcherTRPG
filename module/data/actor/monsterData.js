@@ -32,13 +32,13 @@ export default class MonsterData extends CommonActorData {
       intelligence: new fields.StringField({ initial: '' }),
       organization: new fields.StringField({ initial: '' }),
 
-      common: new fields.StringField({ initial: '' }),
+      common: new fields.HTMLField({ initial: '' }),
       commonSkillValue: new fields.StringField({ initial: '' }),
       showCommonerSuperstition: new fields.BooleanField({ initial: true }),
-      academicKnowledge: new fields.StringField({ initial: '' }),
+      academicKnowledge: new fields.HTMLField({ initial: '' }),
       academicKnowledgeSkillValue: new fields.StringField({ initial: '' }),
       showAcademicKnowledge: new fields.BooleanField({ initial: true }),
-      monsterLore: new fields.StringField({ initial: '' }),
+      monsterLore: new fields.HTMLField({ initial: '' }),
       monsterLoreSkillValue: new fields.StringField({ initial: '' }),
       showMonsterLore: new fields.BooleanField({ initial: true }),
 
