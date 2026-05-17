@@ -1,7 +1,8 @@
 import { getRandomInt } from "../scripts/witcher.js";
 import { WITCHER } from "../setup/config.js";
+import { ActorDocument } from "../setup/foundry-compat.js";
 
-export default class WitcherActor extends Actor {
+export default class WitcherActor extends ActorDocument {
 
   prepareDerivedData() {
     super.prepareDerivedData()
@@ -16,7 +17,7 @@ export default class WitcherActor extends Actor {
         .map(effect => WITCHER.armorEffects.find(armorEffect => armorEffect.id == effect.statusEffect))
 
       armorEffects.forEach(effect => {
-        if (effect.refersStatusEffect && !effect.addsResistance && !this.statuses.find(status => status == effect.id)) {
+        if (effect?.refersStatusEffect && !effect.addsResistance && !this.statuses.has(effect.id)) {
           this.toggleStatusEffect(effect.id);
         }
       });

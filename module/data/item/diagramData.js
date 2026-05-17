@@ -1,5 +1,6 @@
 import CommonItemData from "./commonItemData.js";
 import craftingComponent from "./templates/craftingComponentData.js";
+import { fromUuidSync } from "../../setup/foundry-compat.js";
 
 const fields = foundry.data.fields;
 
@@ -48,10 +49,11 @@ export default class DiagramData extends CommonItemData {
 
      /** @inheritdoc */
      static migrateData(source) {
-      super.migrateData(source);
+      const migrated = super.migrateData(source) ?? source;
 
-      if ("associatedItem" in source) {
-        source.associatedItemUuid = "Compendium.TheWitcherTRPG.gear.Item." + source.associatedItem._id;
+      if ("associatedItem" in migrated) {
+        migrated.associatedItemUuid = "Compendium.thewitchertrpg.gear.Item." + migrated.associatedItem._id;
       }
+      return migrated;
     }
   }

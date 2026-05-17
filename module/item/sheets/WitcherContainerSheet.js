@@ -1,5 +1,6 @@
 
 import WitcherItemSheet from "./WitcherItemSheet.js";
+import { TextEditor, fromUuidSync } from "../../setup/foundry-compat.js";
 
 export default class WitcherContainerSheet extends WitcherItemSheet {
 
@@ -16,7 +17,7 @@ export default class WitcherContainerSheet extends WitcherItemSheet {
   ]
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/container-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/container-sheet.hbs`;
   }
 
   activateListeners(html) {

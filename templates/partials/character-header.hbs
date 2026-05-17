@@ -243,15 +243,15 @@
                 <label>{{localize "WITCHER.Actor.Hp"}}
                     ({{system.derivedStats.hp.max}})/{{system.derivedStats.hp.unmodifiedMax}}</label>
                 {{#if system.deathStateApplied}}
-                    <img class="right-image" src="systems/TheWitcherTRPG/assets/images/health-dead.png" />
+                    <img class="right-image" src="systems/thewitchertrpg/assets/images/health-dead.png" />
                 {{/if}}
                 {{#if system.woundTresholdApplied}}
                     {{#unless system.deathStateApplied}}
-                        <img class="right-image" src="systems/TheWitcherTRPG/assets/images/health-down.png" />
+                        <img class="right-image" src="systems/thewitchertrpg/assets/images/health-down.png" />
                     {{/unless}}
                 {{else}}
                     {{#unless system.deathStateApplied}}
-                        <img class="right-image" src="systems/TheWitcherTRPG/assets/images/health.png" />
+                        <img class="right-image" src="systems/thewitchertrpg/assets/images/health.png" />
                     {{/unless}}
                 {{/if}}
                 <input class="right-value hp-value" name="system.derivedStats.hp.value" type="number"
@@ -259,13 +259,13 @@
             </div>
             <div class="right-element">
                 <label>{{localize "WITCHER.Actor.Shield"}}</label>
-                <img class="right-image" src="systems/TheWitcherTRPG/assets/images/health.png" />
+                <img class="right-image" src="systems/thewitchertrpg/assets/images/health.png" />
                 <input class="right-value hp-value" name="system.derivedStats.shield.value" type="number"
                     value="{{system.derivedStats.shield.value}}" max="99" placeholder="0" data-dtype="Number" />
             </div>
             <div class="right-element">
                 <label>{{localize "WITCHER.Actor.Stamina"}} ({{system.derivedStats.sta.max}})</label>
-                <img class="right-image" src="systems/TheWitcherTRPG/assets/images/stamina.png" />
+                <img class="right-image" src="systems/thewitchertrpg/assets/images/stamina.png" />
                 <input class="right-value" style="bottom:48px;" name="system.derivedStats.sta.value" type="number"
                     value="{{system.derivedStats.sta.value}}" max="99" placeholder="0" data-dtype="Number" />
             </div>
@@ -274,14 +274,14 @@
             {{#if useVerbalCombat}}
                 <div class="right-element">
                     <label>{{localize "WITCHER.Actor.DerStat.Resolve"}} ({{system.derivedStats.resolve.max}})</label>
-                    <img class="right-image" src="systems/TheWitcherTRPG/assets/images/resolve.png" />
+                    <img class="right-image" src="systems/thewitchertrpg/assets/images/resolve.png" />
                     <input class="right-value" name="system.derivedStats.resolve.value" type="number"
                         value="{{system.derivedStats.resolve.value}}" max="99" placeholder="0" data-dtype="Number" />
                 </div>
             {{/if}}
             <div class="right-element">
                 <label>{{localize system.derivedStats.focus.label}} ({{system.derivedStats.focus.max}})</label>
-                <img class="right-image" src="systems/TheWitcherTRPG/assets/images/focus.png" />
+                <img class="right-image" src="systems/thewitchertrpg/assets/images/focus.png" />
                 <input class="right-value" name="system.derivedStats.focus.value" type="number"
                     value="{{system.derivedStats.focus.value}}" max="99" placeholder="0" data-dtype="Number" />
             </div>
@@ -289,14 +289,14 @@
         <div class="right-row">
             <div class="right-element">
                 <label>{{localize "WITCHER.StLuck"}} ({{system.stats.luck.current}})</label>
-                <img class="right-image" src="systems/TheWitcherTRPG/assets/images/clover.png" />
+                <img class="right-image" src="systems/thewitchertrpg/assets/images/clover.png" />
                 <input class="right-value" name="system.stats.luck.total" type="number"
                     value="{{system.stats.luck.total}}" max="99" placeholder="0" data-dtype="Number" />
             </div>
             <div class="right-element">
                 {{#if useAdrenaline}}
                     <label>{{localize "WITCHER.Actor.Adrenaline"}}</label>
-                    <img class="right-image" src="systems/TheWitcherTRPG/assets/images/adrenaline.png" />
+                    <img class="right-image" src="systems/thewitchertrpg/assets/images/adrenaline.png" />
                     <input class="right-value" name="system.adrenaline.current" type="number"
                         value="{{system.adrenaline.current}}" min="0" max="99" placeholder="0" data-dtype="Number" />
                 {{/if}}

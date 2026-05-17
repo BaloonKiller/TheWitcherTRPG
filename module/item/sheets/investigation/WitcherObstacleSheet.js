@@ -1,6 +1,7 @@
 import { WITCHER } from "../../../setup/config.js";
+import { ItemSheetV1, mergeObject } from "../../../setup/foundry-compat.js";
 
-export default class WitcherObstacleSheet extends ItemSheet {
+export default class WitcherObstacleSheet extends ItemSheetV1 {
   /** @override */
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
@@ -16,7 +17,7 @@ export default class WitcherObstacleSheet extends ItemSheet {
   }
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/investigation/obstacle-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/investigation/obstacle-sheet.hbs`;
   }
 
   /** @override */

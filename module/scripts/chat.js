@@ -1,7 +1,9 @@
 import { ExecuteDefence, BlockAttack, ApplyNormalDamage, ApplyNonLethalDamage } from "../scripts/actions.js";
 import * as VerbalCombat from "./verbalCombat.js";
+import { DialogV1, fromUuidSync, renderV1Application } from "../setup/foundry-compat.js";
 
 export function addChatListeners(html) {
+  html = $(html);
   html.on('click', "button.shield", onShield)
   html.on('click', "button.heal", onHeal)
   html.on('click', "a.crit-roll", onCritRoll)
@@ -30,7 +32,7 @@ export async function buttonDialog(data) {
       }
     });
 
-    dialog = new Dialog({
+    dialog = new DialogV1({
       title: data.title,
       content: data.content,
       buttons,
@@ -39,7 +41,7 @@ export async function buttonDialog(data) {
       width: 300,
     });
 
-    await dialog._render(true);
+    await renderV1Application(dialog);
   });
 }
 
@@ -144,12 +146,13 @@ export async function extendedRoll(rollFormula, messageData, config, flags) {
   }
 
   //calculate overall success/failure for the attack/defence
-  if (config.showSuccess && config.threshold >= 0) {
+  const threshold = Number(config.threshold);
+  if (config.showSuccess && Number.isFinite(threshold) && threshold >= 0) {
     let success
     if (!config.reversal) {
-      success = config.defence ? roll.total >= config.threshold : roll.total > config.threshold
+      success = config.defence ? roll.total >= threshold : roll.total > threshold
     } else {
-      success = config.defence ? roll.total <= config.threshold : roll.total < config.threshold
+      success = config.defence ? roll.total <= threshold : roll.total < threshold
     }
 
     let successHeader = config.thresholdDesc ? `: ${game.i18n.localize(config.thresholdDesc)}` : ""
@@ -166,10 +169,10 @@ export async function extendedRoll(rollFormula, messageData, config, flags) {
     let message = await roll.toMessage(messageData)
     if (flags) {
       if (Array.isArray(flags)) {
-        flags.forEach(flag => message.setFlag('TheWitcherTRPG', flag.key, flag.value))
+        flags.forEach(flag => message.setFlag('thewitchertrpg', flag.key, flag.value))
       }
       else {
-        message.setFlag('TheWitcherTRPG', flags.key, flags.value)
+        message.setFlag('thewitchertrpg', flags.key, flags.value)
       }
     }
   }
@@ -186,64 +189,80 @@ function isFumble(roll) {
 }
 
 export function addChatMessageContextOptions(html, options) {
-  let canDefend = li => li.find(".attack-message").length
-  let canApplyDamage = li => li.find(".damage-message").length
-  let canApplyVcDamage = li => li.find(".verbalcombat-damage-message").length
+  const attackMessage = game.i18n.localize("WITCHER.Context.Defense");
+  if (options.some(option => (option.label ?? option.name) === attackMessage)) {
+    return options;
+  }
+
+  let canDefend = li => Boolean(getContextElement(li)?.querySelector(".attack-message"))
+  let canApplyDamage = li => Boolean(getContextElement(li)?.querySelector(".damage-message"))
+  let canApplyVcDamage = li => Boolean(getContextElement(li)?.querySelector(".verbalcombat-damage-message"))
 
   options.push(
     {
-      name: `${game.i18n.localize("WITCHER.Context.applyDmg")}`,
+      label: `${game.i18n.localize("WITCHER.Context.applyDmg")}`,
       icon: '<i class="fas fa-user-minus"></i>',
-      condition: canApplyDamage,
-      callback: li => {
+      visible: canApplyDamage,
+      onClick: li => {
+        const actor = getInteractActor();
+        if (!actor) return;
         ApplyNormalDamage(
-          getInteractActor(),
-          li.find(".dice-total")[0].innerText,
-          li[0].dataset.messageId
+          actor,
+          getContextText(li, ".dice-total"),
+          getContextMessageId(li)
         )
       }
     },
     {
-      name: `${game.i18n.localize("WITCHER.Context.applyNonLethal")}`,
+      label: `${game.i18n.localize("WITCHER.Context.applyNonLethal")}`,
       icon: '<i class="fas fa-user-minus"></i>',
-      condition: canApplyDamage,
-      callback: li => {
+      visible: canApplyDamage,
+      onClick: li => {
+        const actor = getInteractActor();
+        if (!actor) return;
         ApplyNonLethalDamage(
-          getInteractActor(),
-          li.find(".dice-total")[0].innerText,
-          li[0].dataset.messageId
+          actor,
+          getContextText(li, ".dice-total"),
+          getContextMessageId(li)
         )
       }
     },
     {
-      name: `${game.i18n.localize("WITCHER.Context.Defense")}`,
+      label: attackMessage,
       icon: '<i class="fas fa-shield-alt"></i>',
-      condition: canDefend,
-      callback: li => {
+      visible: canDefend,
+      onClick: li => {
+        const actor = getInteractActor();
+        if (!actor) return;
+        const attackElement = getContextElement(li)?.querySelector(".attack-message");
         ExecuteDefence(
-          getInteractActor(),
-          li.find(".attack-message")[0].dataset.dmgType,
-          li.find(".attack-message")[0].dataset.location,
-          li.find(".dice-total")[0].innerText)
+          actor,
+          attackElement?.dataset.dmgType,
+          attackElement?.dataset.location,
+          getContextRollTotal(li, attackElement))
       }
     },
     {
-      name: `${game.i18n.localize("WITCHER.Context.Blocked")}`,
+      label: `${game.i18n.localize("WITCHER.Context.Blocked")}`,
       icon: '<i class="fas fa-shield-alt"></i>',
-      condition: canDefend,
-      callback: li => {
-        BlockAttack(getInteractActor())
+      visible: canDefend,
+      onClick: li => {
+        const actor = getInteractActor();
+        if (!actor) return;
+        BlockAttack(actor)
       }
     },
     {
-      name: `${game.i18n.localize("WITCHER.Context.applyDmg")}`,
+      label: `${game.i18n.localize("WITCHER.Context.applyDmg")}`,
       icon: '<i class="fas fa-user-minus"></i>',
-      condition: canApplyVcDamage,
-      callback: li => {
+      visible: canApplyVcDamage,
+      onClick: li => {
+        const actor = getInteractActor();
+        if (!actor) return;
         VerbalCombat.applyDamage(
-          getInteractActor(),
-          li.find(".dice-total")[0].innerText,
-          li[0].dataset.messageId
+          actor,
+          getContextText(li, ".dice-total"),
+          getContextMessageId(li)
         )
       }
     }
@@ -251,8 +270,83 @@ export function addChatMessageContextOptions(html, options) {
   return options;
 }
 
+function getContextElement(entry) {
+  const element = normalizeContextElement(entry);
+  return element?.closest?.(".chat-message") ?? element;
+}
+
+function normalizeContextElement(entry) {
+  if (!entry) {
+    return null;
+  }
+
+  if (entry instanceof Element) {
+    return entry;
+  }
+
+  if (entry.jquery) {
+    return normalizeContextElement(entry[0]);
+  }
+
+  if (Array.isArray(entry) || entry instanceof NodeList || entry instanceof HTMLCollection) {
+    return normalizeContextElement(entry[0]);
+  }
+
+  if (typeof entry.querySelector === "function") {
+    return entry;
+  }
+
+  return normalizeContextElement(entry.currentTarget ?? entry.target ?? entry.element ?? entry[0]);
+}
+
+function getContextText(entry, selector) {
+  const element = getContextElement(entry);
+  if (!element || typeof element.querySelector !== "function") {
+    return undefined;
+  }
+
+  return element.querySelector(selector)?.textContent?.trim();
+}
+
+function getContextMessageId(entry) {
+  const element = getContextElement(entry);
+  return element?.dataset?.messageId
+    ?? element?.dataset?.messageid
+    ?? element?.dataset?.message
+    ?? element?.id?.replace(/^chat-message-/, "");
+}
+
+function getContextRollTotal(entry, attackElement = null) {
+  const attackElementTotal = Number(attackElement?.dataset?.attackTotal);
+  if (Number.isFinite(attackElementTotal)) {
+    return attackElementTotal;
+  }
+
+  const message = game.messages?.get(getContextMessageId(entry));
+  const flagTotal = Number(message?.getFlag?.("thewitchertrpg", "attackTotal"));
+  if (Number.isFinite(flagTotal)) {
+    return flagTotal;
+  }
+
+  const messageRollTotal = Number(message?.rolls?.at(-1)?.total);
+  if (Number.isFinite(messageRollTotal)) {
+    return messageRollTotal;
+  }
+
+  const element = getContextElement(entry);
+  const diceTotals = element ? Array.from(element.querySelectorAll(".dice-total")) : [];
+  const textTotal = Number(diceTotals.at(-1)?.textContent?.trim() ?? getContextText(entry, ".dice-total"));
+  if (Number.isFinite(textTotal)) {
+    return textTotal;
+  }
+
+  console.warn("TheWitcherTRPG | Could not determine attack total for defence roll.", { entry, message });
+  return undefined;
+}
+
 function getInteractActor() {
-  let actor = canvas.tokens.controlled[0]?.actor ?? game.user.character
+  const controlledTokens = canvas.tokens?.controlled ?? [];
+  let actor = controlledTokens[0]?.actor ?? game.user.character
   if (!actor) {
     return ui.notifications.error(game.i18n.localize("WITCHER.Context.SelectActor"));
   }

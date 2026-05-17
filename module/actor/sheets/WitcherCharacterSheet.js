@@ -2,6 +2,7 @@ import WitcherActorSheet from "./WitcherActorSheet.js";
 import { addModifiers } from "../../scripts/witcher.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
 import { extendedRoll } from "../../scripts/chat.js";
+import { DialogV1, mergeObject, renderV1Application } from "../../setup/foundry-compat.js";
 
 export default class WitcherCharacterSheet extends WitcherActorSheet {
 
@@ -11,9 +12,11 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       classes: ["witcher", "sheet", "actor"],
+      popOut: true,
+      resizable: true,
       width: 1120,
       height: 600,
-      template: "systems/TheWitcherTRPG/templates/sheets/actor/actor-sheet.hbs",
+      template: "systems/thewitchertrpg/templates/sheets/actor/actor-sheet.hbs",
       tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
     });
   }
@@ -129,7 +132,7 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
   }
 
   async _alchemyCraft(event) {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
@@ -162,7 +165,7 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
     content += `<label>${game.i18n.localize("WITCHER.Dialog.CraftingDiagram")}: <input type="checkbox" name="hasDiagram"></label> <br />`
     content += `<label>${game.i18n.localize("WITCHER.Dialog.RealCrafting")}: <input type="checkbox" name="realCraft"></label> <br />`
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: `${game.i18n.localize("WITCHER.Dialog.AlchemyTitle")}`,
       content,
       buttons: {
@@ -216,11 +219,11 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
           }
         }
       }
-    }).render(true)
+    }))
   }
 
   async _craftinCraft(event) {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
@@ -248,7 +251,7 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
     content += `<label>${game.i18n.localize("WITCHER.Dialog.CraftingDiagram")}: <input type="checkbox" name="hasDiagram"></label> <br />`
     content += `<label>${game.i18n.localize("WITCHER.Dialog.RealCrafting")}: <input type="checkbox" name="realCraft"></label> <br />`
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: `${game.i18n.localize("WITCHER.Dialog.CraftingTitle")}`,
       content,
       buttons: {
@@ -296,6 +299,6 @@ export default class WitcherCharacterSheet extends WitcherActorSheet {
           }
         }
       }
-    }).render(true)
+    }))
   }
 }

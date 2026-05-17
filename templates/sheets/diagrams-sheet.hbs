@@ -1,5 +1,5 @@
 <form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
     <table class="item-table">
         <tr>
             <th>{{localize "WITCHER.Diagram.Formulae"}}</th>
@@ -66,7 +66,7 @@
             {{/unless}}
         </tr>
     </table>
-    {{>"systems/TheWitcherTRPG/templates/partials/associated-item.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/associated-item.hbs"}}
     <div class="description">
         <label class="label-info"><b>{{localize "WITCHER.Item.Description"}}</b></label>
         {{editor item.system.description target="system.description" button=true editable=editable}}
@@ -77,15 +77,15 @@
             <th colspan="9">{{localize "WITCHER.Loot.Components"}}</th>
         </tr>
         <tr class="components-display">
-            <th><img src="systems/TheWitcherTRPG/assets/images/vitriol.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/rebis.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/aether.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/quebrith.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/hydragenum.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/vermilion.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/sol.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/caelum.png" class="substance-img"/></th>
-            <th><img src="systems/TheWitcherTRPG/assets/images/fulgur.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/vitriol.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/rebis.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/aether.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/quebrith.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/hydragenum.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/vermilion.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/sol.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/caelum.png" class="substance-img"/></th>
+            <th><img src="systems/thewitchertrpg/assets/images/fulgur.png" class="substance-img"/></th>
         </tr>
         <tr>
             <td><input type="number" name="system.alchemyComponents.vitriol"

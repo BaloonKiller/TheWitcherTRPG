@@ -11,3 +11,10 @@
     display: flex;
     gap: 5px;
 }
+
+.chat-message .attack-message h1,
+.chat-message .damage-message h1 {
+    font-size: 28px;
+    line-height: 1.05;
+    margin: 4px 0 10px;
+}

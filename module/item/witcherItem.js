@@ -1,8 +1,9 @@
 import { extendedRoll } from "../scripts/chat.js";
 import { RollConfig } from "../scripts/rollConfig.js";
 import { WITCHER } from "../setup/config.js";
+import { ItemDocument, ChatMessageDocument, fromUuid } from "../setup/foundry-compat.js";
 
-export default class WitcherItem extends Item {
+export default class WitcherItem extends ItemDocument {
 
   async roll() {
   }
@@ -18,45 +19,116 @@ export default class WitcherItem extends Item {
       // token can be classic south oriented or user avatar which may look to the different direction
       let tokenRotation = 0
 
-      // Prepare template data
-      const templateData = {
-            t: this.system.templateType,
-            user: game.user.id,
-            distance: this.system.templateSize,
-            direction: token.document.rotation - tokenRotation,
-            x: token.center.x,
-            y: token.center.y,
-            fillColor: game.user.color,
-            flags: this.getSpellFlags()
-      };
+      const direction = token.document.rotation - tokenRotation;
+      const effect = isFoundryV14OrNewer()
+        ? await this.#createSpellRegion(token, direction)
+        : await this.#createSpellMeasuredTemplate(token, direction);
 
-      switch (this.system.templateType) {
-        case "rect":
-          templateData.distance = Math.hypot(this.system.templateSize, this.system.templateSize);
-          templateData.width = this.system.templateSize;
-          templateData.direction = 45;
-          //distance = Math.hypot(Number(this.system.templateSize))
-          //width = token?.target?.value ?? width
-          break;
-        case "cone":
-          templateData.angle = 45;
-          break;
-        case "ray":
-          templateData.width = 1;
-          break;
-      }
-
-      let effect = await canvas.scene.createEmbeddedDocuments("MeasuredTemplate", [templateData], { keepId: true });
-
-      this.visualEffectId = effect[0]._id;
+      this.visualEffectId = effect?._id;
+      this.visualEffectType = isFoundryV14OrNewer() ? "Region" : "MeasuredTemplate";
     }
   }
 
   async deleteSpellVisualEffect() {
     if (this.visualEffectId && this.system.visualEffectDuration > 0) {
       setTimeout(() => {
-        canvas.scene.deleteEmbeddedDocuments("MeasuredTemplate", [this.visualEffectId])
+        canvas.scene.deleteEmbeddedDocuments(this.visualEffectType ?? "MeasuredTemplate", [this.visualEffectId])
       }, this.system.visualEffectDuration * 1000);
+    }
+  }
+
+  async #createSpellMeasuredTemplate(token, direction) {
+    const templateData = {
+      t: this.system.templateType,
+      user: game.user.id,
+      distance: this.system.templateSize,
+      direction,
+      x: token.center.x,
+      y: token.center.y,
+      fillColor: game.user.color,
+      flags: this.getSpellFlags()
+    };
+
+    switch (this.system.templateType) {
+      case "rect":
+        templateData.distance = Math.hypot(this.system.templateSize, this.system.templateSize);
+        templateData.width = this.system.templateSize;
+        templateData.direction = 45;
+        break;
+      case "cone":
+        templateData.angle = 45;
+        break;
+      case "ray":
+        templateData.width = 1;
+        break;
+    }
+
+    const effects = await canvas.scene.createEmbeddedDocuments("MeasuredTemplate", [templateData], { keepId: true });
+    return effects[0];
+  }
+
+  async #createSpellRegion(token, rotation) {
+    const regionData = {
+      name: this.name,
+      color: game.user.color,
+      shapes: [this.#getSpellRegionShape(token, rotation)],
+      flags: { "thewitchertrpg": { witcher: { origin: { name: this.name } } } }
+    };
+
+    const effects = await canvas.scene.createEmbeddedDocuments("Region", [regionData]);
+    return effects[0];
+  }
+
+  #getSpellRegionShape(token, rotation) {
+    const gridDistancePixels = canvas.dimensions.distancePixels;
+    const size = Number(this.system.templateSize) * gridDistancePixels;
+    const x = token.center.x;
+    const y = token.center.y;
+
+    switch (this.system.templateType) {
+      case "rect":
+        return {
+          type: "rectangle",
+          x,
+          y,
+          width: size,
+          height: size,
+          rotation: 45,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          gridBased: true
+        };
+      case "cone":
+        return {
+          type: "cone",
+          x,
+          y,
+          radius: size,
+          angle: 45,
+          rotation,
+          gridBased: true
+        };
+      case "ray":
+        return {
+          type: "rectangle",
+          x,
+          y,
+          width: size,
+          height: gridDistancePixels,
+          rotation,
+          anchorX: 0,
+          anchorY: 0.5,
+          gridBased: true
+        };
+      case "circle":
+      default:
+        return {
+          type: "circle",
+          x,
+          y,
+          radius: size,
+          gridBased: true
+        };
     }
   }
 
@@ -157,7 +229,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "vitriol",
         game.i18n.localize("WITCHER.Inventory.Vitriol"),
-        `<img src="systems/TheWitcherTRPG/assets/images/vitriol.png" class="substance-img" /> <b>${this.system.alchemyComponents.vitriol}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/vitriol.png" class="substance-img" /> <b>${this.system.alchemyComponents.vitriol}</b>`,
         this.system.alchemyComponents.vitriol > 0 ? this.system.alchemyComponents.vitriol : 0
       )
     );
@@ -165,7 +237,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "rebis",
         game.i18n.localize("WITCHER.Inventory.Rebis"),
-        `<img src="systems/TheWitcherTRPG/assets/images/rebis.png" class="substance-img" /> <b>${this.system.alchemyComponents.rebis}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/rebis.png" class="substance-img" /> <b>${this.system.alchemyComponents.rebis}</b>`,
         this.system.alchemyComponents.rebis > 0 ? this.system.alchemyComponents.rebis : 0
       )
     );
@@ -173,7 +245,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "aether",
         game.i18n.localize("WITCHER.Inventory.Aether"),
-        `<img src="systems/TheWitcherTRPG/assets/images/aether.png" class="substance-img" /> <b>${this.system.alchemyComponents.aether}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/aether.png" class="substance-img" /> <b>${this.system.alchemyComponents.aether}</b>`,
         this.system.alchemyComponents.aether > 0 ? this.system.alchemyComponents.aether : 0
       )
     );
@@ -181,7 +253,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "quebrith",
         game.i18n.localize("WITCHER.Inventory.Quebrith"),
-        `<img src="systems/TheWitcherTRPG/assets/images/quebrith.png" class="substance-img" /> <b>${this.system.alchemyComponents.quebrith}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/quebrith.png" class="substance-img" /> <b>${this.system.alchemyComponents.quebrith}</b>`,
         this.system.alchemyComponents.quebrith > 0 ? this.system.alchemyComponents.quebrith : 0
       )
     );
@@ -189,7 +261,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "hydragenum",
         game.i18n.localize("WITCHER.Inventory.Hydragenum"),
-        `<img src="systems/TheWitcherTRPG/assets/images/hydragenum.png" class="substance-img" /> <b>${this.system.alchemyComponents.hydragenum}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/hydragenum.png" class="substance-img" /> <b>${this.system.alchemyComponents.hydragenum}</b>`,
         this.system.alchemyComponents.hydragenum > 0 ? this.system.alchemyComponents.hydragenum : 0
       )
     );
@@ -197,7 +269,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "vermilion",
         game.i18n.localize("WITCHER.Inventory.Vermilion"),
-        `<img src="systems/TheWitcherTRPG/assets/images/vermilion.png" class="substance-img" /> <b>${this.system.alchemyComponents.vermilion}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/vermilion.png" class="substance-img" /> <b>${this.system.alchemyComponents.vermilion}</b>`,
         this.system.alchemyComponents.vermilion > 0 ? this.system.alchemyComponents.vermilion : 0
       )
     );
@@ -205,7 +277,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "sol",
         game.i18n.localize("WITCHER.Inventory.Sol"),
-        `<img src="systems/TheWitcherTRPG/assets/images/sol.png" class="substance-img" /> <b>${this.system.alchemyComponents.sol}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/sol.png" class="substance-img" /> <b>${this.system.alchemyComponents.sol}</b>`,
         this.system.alchemyComponents.sol > 0 ? this.system.alchemyComponents.sol : 0
       )
     );
@@ -213,7 +285,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "caelum",
         game.i18n.localize("WITCHER.Inventory.Caelum"),
-        `<img src="systems/TheWitcherTRPG/assets/images/caelum.png" class="substance-img" /> <b>${this.system.alchemyComponents.caelum}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/caelum.png" class="substance-img" /> <b>${this.system.alchemyComponents.caelum}</b>`,
         this.system.alchemyComponents.caelum > 0 ? this.system.alchemyComponents.caelum : 0
       )
     );
@@ -221,7 +293,7 @@ export default class WitcherItem extends Item {
       new alchemyComponent(
         "fulgur",
         game.i18n.localize("WITCHER.Inventory.Fulgur"),
-        `<img src="systems/TheWitcherTRPG/assets/images/fulgur.png" class="substance-img" /> <b>${this.system.alchemyComponents.fulgur}</b>`,
+        `<img src="systems/thewitchertrpg/assets/images/fulgur.png" class="substance-img" /> <b>${this.system.alchemyComponents.fulgur}</b>`,
         this.system.alchemyComponents.fulgur > 0 ? this.system.alchemyComponents.fulgur : 0
       )
     );
@@ -282,7 +354,7 @@ export default class WitcherItem extends Item {
 
       if (result) {
         let craftedItem = await fromUuid(this.system.associatedItemUuid)
-        Item.create(craftedItem, { parent: this.actor });
+        ItemDocument.create(craftedItem.toObject(), { parent: this.actor });
         craftedItemName = craftedItem.name;
       }
     } else {
@@ -316,9 +388,7 @@ export default class WitcherItem extends Item {
       for (let i = 0; i < newQuantity; i++) {
         let roll = await compendiumPack[0].getDocument(tableId).then(el => el.roll())
         let res = roll.results[0]
-        let pack = game.packs.get(res.documentCollection)
-        await pack?.getIndex();
-        let genItem = await pack?.getDocument(res.documentId)
+        let genItem = await fromUuid(res.uuid)
 
         if (!genItem) {
           return ui.notifications.error(`${game.i18n.localize("WITCHER.Monster.exportLootInvalidItemError")}`)
@@ -327,7 +397,7 @@ export default class WitcherItem extends Item {
         // add generated item to the loot sheet
         let itemInLoot = this.actor.items.find(i=> i.name === genItem.name && i.type === genItem.type)
         if (!itemInLoot) {
-          await Item.create(genItem, { parent: this.actor })
+          await ItemDocument.create(genItem.toObject(), { parent: this.actor })
         } else {
           // if we have already generated item in the loot sheet - increase it's count instead of creation
           let itemToUpdate = itemInLoot[0] ? itemInLoot[0] : itemInLoot
@@ -344,7 +414,7 @@ export default class WitcherItem extends Item {
           content: `${successMessage} ${res.getChatText()}`,
           whisper: game.users.filter(u => u.isGM).map(u => u._id)
         };
-        ChatMessage.create(chatData, {});
+        ChatMessageDocument.create(chatData, {});
       }
 
       // remove basic item from the loot sheet
@@ -356,4 +426,8 @@ export default class WitcherItem extends Item {
       return ui.notifications.error(`${game.i18n.localize("WITCHER.Monster.exportLootToManyRollTablesError")}`)
     }
   }
+}
+
+function isFoundryV14OrNewer() {
+  return Number(game.release?.generation ?? 0) >= 14;
 }

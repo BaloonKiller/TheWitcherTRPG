@@ -29,7 +29,7 @@
                     <td class="table-empty-end-space"></td>
                 </tr>
                 {{#each clues as |item id|}}
-                    {{> "systems/TheWitcherTRPG/templates/partials/investigation/clue-display.hbs" item=item isGM=../isGM skills=../skills}}
+                    {{> "systems/thewitchertrpg/templates/partials/investigation/clue-display.hbs" item=item isGM=../isGM skills=../skills}}
                 {{/each}}
             </table>
             <h2>{{localize "WITCHER.Investigation.obstacles"}} <a class="add-item" data-itemType="obstacle"><i class="fas fa-plus"></i></a>
@@ -46,7 +46,7 @@
                     <td class="table-empty-end-space"></td>
                 </tr>
                 {{#each obstacles as |item id|}}
-                    {{> "systems/TheWitcherTRPG/templates/partials/investigation/obstacle-display.hbs" item=item isGM=../isGM skills=../skills}}
+                    {{> "systems/thewitchertrpg/templates/partials/investigation/obstacle-display.hbs" item=item isGM=../isGM skills=../skills}}
                 {{/each}}
             </table>
         </div>

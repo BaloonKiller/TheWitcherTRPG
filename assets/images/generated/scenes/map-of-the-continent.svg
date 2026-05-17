@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <rect width="1600" height="1000" fill="#d6c091"/>
+  <rect x="26" y="26" width="1548" height="948" fill="none" stroke="#6f4d2c" stroke-width="18"/>
+  <path d="M238 192c118-92 250-96 364-42 82 40 140-30 246-24 112 6 174 94 286 86 118-8 214 56 250 166-92 68-80 178-154 242-92 80-222 42-314 112-110 84-242 100-364 28-96-58-190 14-294-44-94-52-112-166-56-264 46-78-52-158 40-260z" fill="#b6925f" stroke="#56391f" stroke-width="14"/>
+  <path d="M330 318c74-42 150-38 228-8M716 292c106-46 222-34 330 26M482 604c128-64 256-26 374-74M930 704c98-72 196-72 294-18" fill="none" stroke="#654726" stroke-width="9" stroke-linecap="round"/>
+  <path d="M180 862c204-80 354-20 522-62 160-40 250-136 430-118 120 12 198-36 304-82" fill="none" stroke="#745936" stroke-width="7" stroke-dasharray="20 18" opacity=".8"/>
+  <g fill="#516f50" stroke="#2f422f" stroke-width="5">
+    <circle cx="410" cy="408" r="28"/><circle cx="452" cy="436" r="22"/><circle cx="506" cy="390" r="18"/>
+    <circle cx="1048" cy="342" r="27"/><circle cx="1112" cy="378" r="22"/><circle cx="818" cy="736" r="25"/>
+  </g>
+  <g fill="#4b6f87" opacity=".76"><path d="M1190 132c90 34 164 104 206 206-42 18-88 26-136 18-70-12-120-60-150-124z"/><path d="M170 590c92 8 148 52 170 130-78 20-150 0-216-58z"/></g>
+  <text x="800" y="106" text-anchor="middle" font-family="Georgia, serif" font-size="64" font-weight="700" fill="#3e2815">Map Of The Continent</text>
+  <text x="800" y="930" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#5a3e23">fallback regional map</text>
+</svg>

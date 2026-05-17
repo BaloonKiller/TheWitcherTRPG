@@ -1,13 +1,24 @@
 import { WITCHER } from "../../../setup/config.js";
+import { ActorSheetV1, ItemDocument, mergeObject, renderDocumentSheet, sanitizeSheetRenderOptions } from "../../../setup/foundry-compat.js";
 
-export default class WitcherMysterySheet extends ActorSheet {
+export default class WitcherMysterySheet extends ActorSheetV1 {
+
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
+
+  async _render(force, options = {}) {
+    return super._render(force, sanitizeSheetRenderOptions(options));
+  }
 
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       classes: ["witcher", "sheet", "actor"],
+      popOut: true,
+      resizable: true,
       width: 1120,
       height: 600,
-      template: "systems/TheWitcherTRPG/templates/sheets/investigation/mystery-sheet.hbs",
+      template: "systems/thewitchertrpg/templates/sheets/investigation/mystery-sheet.hbs",
       tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
     });
   }
@@ -46,7 +57,7 @@ export default class WitcherMysterySheet extends ActorSheet {
       type: element.dataset.itemtype
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   }
 
 
@@ -55,7 +66,7 @@ export default class WitcherMysterySheet extends ActorSheet {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    renderDocumentSheet(item)
   }
 
   async _onItemDelete(event) {

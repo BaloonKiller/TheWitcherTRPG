@@ -1,4 +1,5 @@
 import CommonItemData from "./commonItemData.js";
+import { fromUuidSync } from "../../setup/foundry-compat.js";
 
 const fields = foundry.data.fields;
 

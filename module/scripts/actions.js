@@ -2,23 +2,42 @@ import { buttonDialog, extendedRoll } from "./chat.js";
 import { addModifiers } from "./witcher.js";
 import { RollConfig } from "./rollConfig.js";
 import { WITCHER } from "../setup/config.js";
+import { DialogV1, renderV1Application } from "../setup/foundry-compat.js";
 
 async function ApplyNormalDamage(actor, totalDamage, messageId) {
-  applyDamage(actor, totalDamage, messageId, "hp")
+  return applyDamage(actor, totalDamage, messageId, "hp")
 }
 
 async function ApplyNonLethalDamage(actor, totalDamage, messageId) {
-  applyDamage(actor, totalDamage, messageId, "sta")
+  return applyDamage(actor, totalDamage, messageId, "sta")
 }
 
 async function applyDamage(actor, totalDamage, messageId, derivedStat) {
-  let damageOptions = game.messages.get(messageId).getFlag('TheWitcherTRPG', 'damageOptions')
-  let damage = game.messages.get(messageId).getFlag('TheWitcherTRPG', 'damage')
-  let armors = actor.getList("armor").filter(a => a.system.equipped);
+  const message = getDamageMessage(messageId, totalDamage);
+  if (!message) {
+    return ui.notifications.error(game.i18n.localize("WITCHER.Context.applyDmg") + ": missing chat message data.");
+  }
 
-  let headArmors = armors.filter(h => h.system.location == "Head" || h.system.location == "FullCover")
-  let torsoArmors = armors.filter(t => t.system.location == "Torso" || t.system.location == "FullCover")
-  let legArmors = armors.filter(l => l.system.location == "Leg" || l.system.location == "FullCover")
+  totalDamage = Number(totalDamage);
+  if (!Number.isFinite(totalDamage)) {
+    totalDamage = Number(message.rolls?.at(-1)?.total);
+  }
+
+  if (!Number.isFinite(totalDamage)) {
+    return ui.notifications.error(game.i18n.localize("WITCHER.Context.applyDmg") + ": invalid damage total.");
+  }
+
+  let damageOptions = message.getFlag('thewitchertrpg', 'damageOptions') ?? {}
+  let damage = message.getFlag('thewitchertrpg', 'damage')
+  if (!damage) {
+    return ui.notifications.error(game.i18n.localize("WITCHER.Context.applyDmg") + ": missing damage data.");
+  }
+
+  let armors = actor.getList("armor").filter(isArmorEquipped);
+
+  let headArmors = armors.filter(armor => armorProtectsLocation(armor, "Head", "FullCover"))
+  let torsoArmors = armors.filter(armor => armorProtectsLocation(armor, "Torso", "FullCover"))
+  let legArmors = armors.filter(armor => armorProtectsLocation(armor, "Leg", "FullCover"))
 
   let naturalArmors = armors.filter(n => n.system.type == "Natural")
 
@@ -91,7 +110,7 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
   }
 
   if (silverDmg) {
-    let silverRoll = await new Roll(silverDmg).evaluate({ async: true })
+    let silverRoll = await new Roll(silverDmg).evaluate()
     totalDamage = Number(totalDamage) + silverRoll.total
     infoTotalDmg += `+${silverRoll.total}[${game.i18n.localize("WITCHER.Damage.silver")}]`
   }
@@ -209,11 +228,24 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
     displaySP += `[${game.i18n.localize("WITCHER.Armor.Natural")}]`;
   })
 
+  totalSP = Number(totalSP);
+  if (!Number.isFinite(totalSP)) {
+    totalSP = 0;
+  }
+  if (displaySP === "" || displaySP == null) {
+    displaySP = 0;
+  }
+
   if (actor.type == "character" && !armorSet && !naturalArmors) {
     return
   }
 
-  if (damageOptions.improvedArmorPiercing) {
+  const ignoresArmor = Boolean(damageOptions.ignoreArmor);
+
+  if (ignoresArmor) {
+    totalSP = 0;
+    displaySP = 0;
+  } else if (damageOptions.improvedArmorPiercing) {
     totalSP = totalSP / 2;
     displaySP = displaySP / 2;
   }
@@ -234,7 +266,7 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
       speaker: ChatMessage.getSpeaker({ actor: actor }),
       flags: actor.getNoDamageFlags(),
     }
-    let rollResult = await new Roll("1").evaluate({ async: true })
+    let rollResult = await new Roll("1").evaluate()
     rollResult.toMessage(messageData)
     return
   }
@@ -242,7 +274,7 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
   totalDamage *= location.locationFormula
   let infoAfterLocation = totalDamage
 
-  let ignoreArmorResistance = damageOptions.armorPiercing || damageOptions.improvedArmorPiercing;
+  let ignoreArmorResistance = ignoresArmor || damageOptions.armorPiercing || damageOptions.improvedArmorPiercing;
   if (!ignoreArmorResistance && (armorSet["lightArmor"]?.system[damage.type] || armorSet["mediumArmor"]?.system[damage.type] || armorSet["heavyArmor"]?.system[damage.type] || naturalArmors.find(armor => armor.system[damage.type]))) {
     totalDamage *= 0.5
   }
@@ -256,8 +288,9 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
   let infoAfterResistance = totalDamage
 
   let spDamage = damageOptions.ablating ? Math.floor((await new Roll("1d6/2+1").evaluate()).total) : 1
-  //todo refactor
-  switch (location.name) {
+  if (!ignoresArmor) {
+    //todo refactor
+    switch (location.name) {
     case "Head":
       if (armorSet["lightArmor"]) {
         let lightArmorSP = armorSet["lightArmor"].system.headStopping - spDamage;
@@ -396,16 +429,17 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
         armorSet["heavyArmor"].update({ 'system.leftLegStopping': heavyArmorSP })
       }
       break;
+    }
   }
 
   let messageContent = `${game.i18n.localize("WITCHER.Damage.initial")}: <span class="error-display">${infoTotalDmg}</span> <br />
     ${game.i18n.localize("WITCHER.Damage.totalSP")}: <span class="error-display">${displaySP} ${damageOptions.improvedArmorPiercing ? game.i18n.localize("WITCHER.Damage.improvedArmorPiercing") : ''}</span><br />
-    ${game.i18n.localize("WITCHER.Damage.afterSPReduct")}: <span class="error-display">${infoAfterSPReduction} ${(damageOptions.improvedArmorPiercing || damageOptions.armorPiercing) ? game.i18n.localize("WITCHER.Damage.armorPiercing") : ''}</span><br />
+    ${game.i18n.localize("WITCHER.Damage.afterSPReduct")}: <span class="error-display">${infoAfterSPReduction} ${ignoresArmor ? game.i18n.localize("WITCHER.Damage.ignoreArmor") : (damageOptions.improvedArmorPiercing || damageOptions.armorPiercing) ? game.i18n.localize("WITCHER.Damage.armorPiercing") : ''}</span><br />
     ${game.i18n.localize("WITCHER.Damage.afterLocationModifier")}: <span class="error-display">${infoAfterLocation}</span><br />
     ${game.i18n.localize("WITCHER.Damage.afterResistances")}: <span class="error-display">${infoAfterResistance}</span><br /><br />
     ${game.i18n.localize("WITCHER.Damage.totalApplied")}: <span class="error-display">${Math.floor(totalDamage)}</span>
     `;
-  if (damageOptions.ablating) {
+  if (damageOptions.ablating && !ignoresArmor) {
     messageContent += `<br/>${game.i18n.localize("WITCHER.Damage.ablated")}: <span class="error-display">${spDamage}</span>`
   }
 
@@ -415,12 +449,37 @@ async function applyDamage(actor, totalDamage, messageId, derivedStat) {
     speaker: ChatMessage.getSpeaker({ actor: actor }),
     flags: actor.getDamageFlags(),
   }
-  let rollResult = await new Roll("1").evaluate({ async: true })
+  let rollResult = await new Roll("1").evaluate()
   rollResult.toMessage(messageData)
 
+  const stat = actor.system.derivedStats[derivedStat];
+  const currentValue = Number(stat?.value);
+  const appliedDamage = Math.floor(totalDamage);
+  if (!Number.isFinite(currentValue) || !Number.isFinite(appliedDamage)) {
+    return ui.notifications.error(game.i18n.localize("WITCHER.Context.applyDmg") + ": invalid actor damage state.");
+  }
+
   actor?.update({
-    [`system.derivedStats.${derivedStat}.value`]: actor.system.derivedStats.hp.value - Math.floor(totalDamage)
+    [`system.derivedStats.${derivedStat}.value`]: currentValue - appliedDamage
   });
+}
+
+function getDamageMessage(messageId, totalDamage) {
+  const message = messageId ? game.messages.get(messageId) : null;
+  if (message?.getFlag('thewitchertrpg', 'damage')) {
+    return message;
+  }
+
+  const expectedTotal = Number(totalDamage);
+  const messages = game.messages.contents ?? Array.from(game.messages);
+  const damageMessages = messages
+    .filter(message => message?.getFlag?.('thewitchertrpg', 'damage'))
+    .reverse();
+
+  return damageMessages.find(message => {
+    if (!Number.isFinite(expectedTotal)) return true;
+    return message.rolls?.some(roll => Number(roll.total) === expectedTotal);
+  }) ?? damageMessages[0];
 }
 
 function getArmors(armors) {
@@ -457,15 +516,18 @@ function getArmorSp(armorSet, location) {
 
 function getStackedArmorSp(lightArmorSP, mediumArmorSP, heavyArmorSP) {
   let totalSP = 0
-  let displaySP = ""
+  let displaySP = 0
+  lightArmorSP = normalizeSp(lightArmorSP)
+  mediumArmorSP = normalizeSp(mediumArmorSP)
+  heavyArmorSP = normalizeSp(heavyArmorSP)
 
-  if (heavyArmorSP) {
+  if (heavyArmorSP > 0) {
     totalSP = heavyArmorSP
     displaySP = heavyArmorSP
   }
 
-  if (mediumArmorSP) {
-    if (heavyArmorSP) {
+  if (mediumArmorSP > 0) {
+    if (heavyArmorSP > 0) {
       let diff = getArmorDiffBonus(heavyArmorSP, mediumArmorSP)
       totalSP = Number(totalSP) + Number(diff)
       displaySP += "+" + diff
@@ -476,13 +538,13 @@ function getStackedArmorSp(lightArmorSP, mediumArmorSP, heavyArmorSP) {
     }
   }
 
-  if (lightArmorSP) {
-    if (mediumArmorSP) {
+  if (lightArmorSP > 0) {
+    if (mediumArmorSP > 0) {
       let diff = getArmorDiffBonus(mediumArmorSP, lightArmorSP)
       totalSP = Number(totalSP) + Number(diff)
       displaySP += `+${diff}[${game.i18n.localize("WITCHER.Armor.LayerBonus")}]`
     }
-    else if (heavyArmorSP) {
+    else if (heavyArmorSP > 0) {
       let diff = getArmorDiffBonus(heavyArmorSP, lightArmorSP)
       totalSP = Number(totalSP) + Number(diff)
       displaySP += `+${diff}[${game.i18n.localize("WITCHER.Armor.LayerBonus")}]`
@@ -493,6 +555,20 @@ function getStackedArmorSp(lightArmorSP, mediumArmorSP, heavyArmorSP) {
     }
   }
   return [displaySP, totalSP]
+}
+
+function isArmorEquipped(armor) {
+  const equipped = armor.system.equipped;
+  return equipped === true || equipped === "true" || equipped === "checked" || equipped === 1 || equipped === "1";
+}
+
+function armorProtectsLocation(armor, ...locations) {
+  return locations.includes(String(armor.system.location ?? "").trim());
+}
+
+function normalizeSp(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function getArmorDiffBonus(OverArmor, UnderArmor) {
@@ -529,7 +605,7 @@ function BlockAttack(actor) {
 
   const content = `<label>${game.i18n.localize("WITCHER.Dialog.DefenseWith")}: </label><select name="form">${options}</select><br />`;
 
-  new Dialog({
+  renderV1Application(new DialogV1({
     title: `${game.i18n.localize("WITCHER.Dialog.DefenseTitle")}`,
     content,
     buttons: {
@@ -556,11 +632,12 @@ function BlockAttack(actor) {
         }
       }
     }
-  }).render(true)
+  }))
 }
 
 function ExecuteDefence(actor, attackType, location, totalAttack) {
-  let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+  let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
+  totalAttack = Number(totalAttack);
 
   let weapons = actor.items.filter(function (item) { return item.type == "weapon" && !item.system.isAmmo && WITCHER.meleeSkills.includes(item.system.attackSkill) });
   let shields = actor.items.filter(function (item) { return item.type == "armor" && item.system.location == "Shield" });
@@ -580,7 +657,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
     flavor: `<h1>${game.i18n.localize("WITCHER.Dialog.Defense")}</h1>`,
   }
 
-  new Dialog({
+  renderV1Application(new DialogV1({
     title: `${game.i18n.localize("WITCHER.Dialog.DefenseTitle")}`,
     content,
     buttons: {
@@ -615,7 +692,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -654,7 +731,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -714,7 +791,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -774,7 +851,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -834,7 +911,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -873,7 +950,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
           config.showCrit = true
           config.showSuccess = true
           config.defence = true
-          config.threshold = totalAttack
+          config.threshold = Number.isFinite(totalAttack) ? totalAttack : -1
           config.thresholdDesc = skill.label
           config.flagsOnSuccess = actor.getDefenceSuccessFlags(skill)
           config.flagsOnFailure = actor.getDefenceFailFlags(skill)
@@ -882,7 +959,7 @@ function ExecuteDefence(actor, attackType, location, totalAttack) {
         }
       },
     }
-  }).render(true)
+  }))
 }
 
 export { ExecuteDefence, BlockAttack, ApplyNormalDamage, ApplyNonLethalDamage };

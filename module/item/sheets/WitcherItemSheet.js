@@ -1,7 +1,8 @@
 
 import { genId } from "../../scripts/witcher.js";
+import { DragDrop, ItemSheetV1, mergeObject } from "../../setup/foundry-compat.js";
 
-export default class WitcherItemSheet extends ItemSheet {
+export default class WitcherItemSheet extends ItemSheetV1 {
   /** @override */
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
@@ -17,7 +18,7 @@ export default class WitcherItemSheet extends ItemSheet {
   }
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/${this.object.type}-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/${this.object.type}-sheet.hbs`;
   }
 
   /** @override */

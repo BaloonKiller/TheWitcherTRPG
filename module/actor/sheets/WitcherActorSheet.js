@@ -13,6 +13,7 @@ import { skillModifierMixin } from "../mixins/skillModifierMixin.js";
 import { skillMixin } from "../mixins/skillMixin.js";
 import { statMixin } from "../mixins/statMixin.js";
 import { itemMixin } from "../mixins/itemMixin.js";
+import { ActorSheetV1, DialogV1, renderTemplate, renderV1Application, sanitizeSheetRenderOptions } from "../../setup/foundry-compat.js";
 
 Array.prototype.sum = function (prop) {
   var total = 0
@@ -45,19 +46,27 @@ Array.prototype.cost = function () {
   return Math.ceil(total)
 }
 
-export default class WitcherActorSheet extends ActorSheet {
+export default class WitcherActorSheet extends ActorSheetV1 {
 
   statMap = WITCHER.statMap;
   skillMap = WITCHER.skillMap;
+
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
+
+  async _render(force, options = {}) {
+    return super._render(force, sanitizeSheetRenderOptions(options));
+  }
 
   /** @override */
   getData() {
     const context = super.getData();
 
-    context.useAdrenaline = game.settings.get("TheWitcherTRPG", "useOptionalAdrenaline")
-    context.displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
-    context.useVerbalCombat = game.settings.get("TheWitcherTRPG", "useOptionalVerbalCombat")
-    context.displayRep = game.settings.get("TheWitcherTRPG", "displayRep")
+    context.useAdrenaline = game.settings.get("thewitchertrpg", "useOptionalAdrenaline")
+    context.displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
+    context.useVerbalCombat = game.settings.get("thewitchertrpg", "useOptionalVerbalCombat")
+    context.displayRep = game.settings.get("thewitchertrpg", "displayRep")
 
     context.config = CONFIG.WITCHER;
     CONFIG.Combat.initiative.formula = "1d10 + @stats.ref.current" + (context.displayRollDetails ? "[REF]" : "");
@@ -206,7 +215,7 @@ export default class WitcherActorSheet extends ActorSheet {
   }
 
   async _onCritRoll(event) {
-    let rollResult = await new Roll("1d10x10").evaluate({ async: true })
+    let rollResult = await new Roll("1d10x10").evaluate()
     let messageData = {
       speaker: ChatMessage.getSpeaker({ actor: this.actor })
     }
@@ -230,7 +239,7 @@ export default class WitcherActorSheet extends ActorSheet {
             <div><input id="HT" type="checkbox" unchecked/> ${game.i18n.localize("WITCHER.Heal.healingTent")}</div>
         </div>
       </div>`;
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: game.i18n.localize("WITCHER.Heal.dialogTitle"),
       content: dialogTemplate,
       buttons: {
@@ -294,13 +303,13 @@ export default class WitcherActorSheet extends ActorSheet {
           label: `${game.i18n.localize("WITCHER.Button.Cancel")}`,
         }
       },
-    }).render(true);
+    }));
   }
 
   async _onVerbalCombat() {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
-    const dialogTemplate = await renderTemplate("systems/TheWitcherTRPG/templates/sheets/verbal-combat.hbs");
-    new Dialog({
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
+    const dialogTemplate = await renderTemplate("systems/thewitchertrpg/templates/sheets/verbal-combat.hbs");
+    renderV1Application(new DialogV1({
       title: game.i18n.localize("WITCHER.verbalCombat.DialogTitle"),
       content: dialogTemplate,
       buttons: {
@@ -357,7 +366,7 @@ export default class WitcherActorSheet extends ActorSheet {
           label: `${game.i18n.localize("WITCHER.Button.Cancel")}`,
         }
       },
-    }).render(true);
+    }));
   }
 
   createVerbalCombatFlags(verbalCombat, vcDamage) {

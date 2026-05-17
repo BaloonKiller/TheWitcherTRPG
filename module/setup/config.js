@@ -761,14 +761,24 @@ WITCHER.statusEffects = [
     {
         id: 'reducedVision',
         label: 'WITCHER.statusEffects.reducedVision',
-        icon: 'systems/TheWitcherTRPG/assets/images/statusEffects/visored-helm.svg',
+        icon: 'systems/thewitchertrpg/assets/images/statusEffects/visored-helm.svg',
     },
     {
         id: 'holdAction',
         label: 'WITCHER.statusEffects.holdAction',
-        icon: 'systems/TheWitcherTRPG/assets/images/statusEffects/uncertainty.svg',
+        icon: 'systems/thewitchertrpg/assets/images/statusEffects/uncertainty.svg',
     },
 ]
+
+WITCHER.statusEffects = WITCHER.statusEffects.map((effect, index) => ({
+    ...effect,
+    name: effect.name ?? effect.label,
+    img: effect.img ?? effect.icon,
+    hud: effect.hud ?? true,
+    order: effect.order ?? index,
+}));
+
+WITCHER.statusEffectsById = Object.fromEntries(WITCHER.statusEffects.map(effect => [effect.id, effect]));
 
 WITCHER.armorEffects = [
     {

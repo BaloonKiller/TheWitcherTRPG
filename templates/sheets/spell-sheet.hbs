@@ -1,5 +1,5 @@
 <form class="{{cssClass}}" autocomplete="off">
-    {{>"systems/TheWitcherTRPG/templates/partials/item-header.hbs"}}
+    {{>"systems/thewitchertrpg/templates/partials/item-header.hbs"}}
     <table class="item-table">
         <tr>
             <th title="{{localize "WITCHER.Spell.Variable"}}">{{localize "WITCHER.Spell.Short.Variable"}}</th>
@@ -107,6 +107,8 @@
                 {{/if}}
                 {{#if (eq item.system.causeDamages true)}}
                     <th>{{localize "WITCHER.Weapon.Short.Damage"}}</th>
+                    <th>{{localize "WITCHER.Dialog.damageType"}}</th>
+                    <th>{{localize "WITCHER.Spell.IgnoreArmor"}}</th>
                 {{/if}}
                 {{#if (eq item.system.createsShield true)}}
                     <th>{{localize "WITCHER.Spell.Short.Shield"}}</th>
@@ -140,6 +142,20 @@
                     <td>
                         <input class="medium" name="system.damage" type="text"
                                value="{{#unless item.system.damage}}1d6+0{{else}}{{item.system.damage}}{{/unless}}"/>
+                    </td>
+                    <td>
+                        <select name="system.damageType">
+                            {{#select item.system.damageType}}
+                                <option value=""></option>
+                                <option value="bludgeoning">{{localize "WITCHER.Enhancement.Bludgeoning"}}</option>
+                                <option value="slashing">{{localize "WITCHER.Enhancement.Slashing"}}</option>
+                                <option value="piercing">{{localize "WITCHER.Enhancement.Piercing"}}</option>
+                                <option value="elemental">{{localize "WITCHER.Enhancement.Elemental"}}</option>
+                            {{/select}}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="system.ignoreArmor" {{checked item.system.ignoreArmor}}/>
                     </td>
                 {{/if}}
                 {{#if (eq item.system.createsShield true)}}

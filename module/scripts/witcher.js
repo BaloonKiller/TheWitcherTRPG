@@ -1,5 +1,6 @@
 import { extendedRoll } from "./chat.js";
 import { RollConfig } from "./rollConfig.js";
+import { DialogV1, randomID, renderV1Application } from "../setup/foundry-compat.js";
 
 export function getRandomInt(max) {
 	return Math.floor(Math.random() * (max + 1)) + 1;
@@ -223,7 +224,7 @@ function updateDerived(actor) {
 		curFocus = (Math.floor((curWill + curInt) / 2) * 3) + focusTotalModifiers
 	}
 
-	thisActor.update({
+	const derivedUpdates = {
 		'system.deathStateApplied': isDead,
 		'system.woundTresholdApplied': isWounded,
 		'system.stats.int.current': curInt,
@@ -263,7 +264,14 @@ function updateDerived(actor) {
 		'system.attackStats.meleeBonus': meleeBonus,
 		'system.attackStats.punch.value': `1d6+${meleeBonus}`,
 		'system.attackStats.kick.value': `1d6+${4 + meleeBonus}`,
-	});
+	};
+
+	if (thisActor.pack && thisActor.updateSource) {
+		thisActor.updateSource(derivedUpdates);
+		return;
+	}
+
+	return thisActor.update(derivedUpdates);
 }
 
 function getArmorEcumbrance(actor) {
@@ -291,7 +299,7 @@ function rollSkillCheck(actor, skillMapEntry) {
 	let skillValue = actor.system.skills[attribute.name][skillName].value;
 	let skill = actor.system.skills[attribute.name][skillName]
 
-	let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+	let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
 	let messageData = {
 		speaker: ChatMessage.getSpeaker({ actor: actor }),
@@ -346,7 +354,7 @@ function rollSkillCheck(actor, skillMapEntry) {
 		})
 	});
 
-	new Dialog({
+	renderV1Application(new DialogV1({
 		title: `${game.i18n.localize("WITCHER.Dialog.Skill")}: ${skillLabel}`,
 		content: `<label>${game.i18n.localize("WITCHER.Dialog.attackCustom")}: <input name="customModifiers" value=0></label>`,
 		buttons: {
@@ -367,7 +375,7 @@ function rollSkillCheck(actor, skillMapEntry) {
 				}
 			}
 		}
-	}).render(true)
+	}))
 }
 
 function genId() {
@@ -387,7 +395,7 @@ function calc_currency_weight(currency) {
 }
 
 function addModifiers(modifiers, formula) {
-	let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+	let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 	modifiers?.forEach(mod => {
 		if (mod.value < 0) {
 			formula += !displayRollDetails ? `${mod.value}` : `${mod.value}[${mod.name}]`

@@ -2,12 +2,13 @@ import { buttonDialog, extendedRoll } from "../../scripts/chat.js";
 import { rollDamage } from "../../scripts/attack.js";
 import { addModifiers } from "../../scripts/witcher.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import { DialogV1, ItemDocument, TextEditor, DragDrop, renderDocumentSheet, renderTemplate, renderV1Application } from "../../setup/foundry-compat.js";
 
 export let itemMixin = {
 
   async _onDropItem(event, data) {
     if (!this.actor.isOwner) return false;
-    const item = await Item.implementation.fromDropData(data);
+    const item = await ItemDocument.implementation.fromDropData(data);
     const itemData = item.toObject();
 
     // Handle item sorting within the same Actor
@@ -41,7 +42,7 @@ export let itemMixin = {
           speaker: ChatMessage.getSpeaker({ actor: this.actor }),
           flavor: `<h1>Quantity of ${dragData.item.name}</h1>`,
         }
-        let roll = await new Roll(dragData.item.system.quantity).evaluate({ async: true })
+        let roll = await new Roll(dragData.item.system.quantity).evaluate()
         roll.toMessage(messageData)
 
         // Add items to the recipient actor
@@ -188,12 +189,12 @@ export let itemMixin = {
       itemData.system = { type: "alchemical", level: "novice", isFormulae: true };
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   },
 
   async _onSpellRoll(event, itemId = null) {
 
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
     if (!itemId) {
       itemId = event.currentTarget.closest(".item").dataset.itemId;
@@ -368,13 +369,15 @@ export let itemMixin = {
     if (spellItem.system.causeDamages) {
       let effects = JSON.stringify(spellItem.system.effects)
       let locationJSON = JSON.stringify(this.actor.getLocationObject("randomSpell"))
+      let damageType = getSpellDamageType(spellItem)
+      let ignoreArmor = getSpellIgnoresArmor(spellItem)
 
       let dmg = spellItem.system.damage || "0"
       if (spellItem.system.staminaIsVar) {
         dmg = this.calcStaminaMulti(origStaCost, dmg)
       }
 
-      messageData.flavor += `<button class="damage" data-img="${spellItem.img}" data-name="${spellItem.name}" data-dmg="${dmg}" data-location='${locationJSON}' data-effects='${effects}'>${game.i18n.localize("WITCHER.table.Damage")}</button>`;
+      messageData.flavor += `<button class="damage" data-img="${spellItem.img}" data-name="${spellItem.name}" data-dmg="${dmg}" data-dmg-type="${damageType}" data-ignore-armor="${ignoreArmor}" data-location='${locationJSON}' data-effects='${effects}'>${game.i18n.localize("WITCHER.table.Damage")}</button>`;
     }
 
     if (spellItem.system.createsShield) {
@@ -432,7 +435,7 @@ export let itemMixin = {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    renderDocumentSheet(item)
   },
 
   async _onItemShow(event) {
@@ -441,14 +444,14 @@ export let itemMixin = {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: item.name,
       content: `<img src="${item.img}" alt="${item.img}" width="100%" />`,
       buttons: {}
     }, {
       width: 520,
       resizable: true
-    }).render(true);
+    }));
   },
 
   async _onItemDelete(event) {
@@ -482,7 +485,7 @@ export let itemMixin = {
       content += `<div><label>${game.i18n.localize("WITCHER.Dialog.Enhancement")}: <select name="enhancement">${enhancementsOption}</select></label></div>`
     }
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: `${game.i18n.localize("WITCHER.Enhancement.ChooseTitle")}`,
       content,
       buttons: {
@@ -554,7 +557,7 @@ export let itemMixin = {
           }
         }
       }
-    }).render(true)
+    }))
   },
 
   _onItemDisplayInfo(event) {
@@ -566,7 +569,7 @@ export let itemMixin = {
   },
 
   async _onItemRoll(event, itemId = null) {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
 
     if (!itemId) {
       itemId = event.currentTarget.closest(".item").dataset.itemId;
@@ -612,9 +615,9 @@ export let itemMixin = {
     let meleeBonus = this.actor.system.attackStats.meleeBonus
     let data = { item, attackSkill, displayDmgFormula, isMeleeAttack, noAmmo, noThrowable, ammunitionOption, ammunitions, meleeBonus: meleeBonus }
     const myDialogOptions = { width: 500 }
-    const dialogTemplate = await renderTemplate("systems/TheWitcherTRPG/templates/sheets/weapon-attack.hbs", data)
+    const dialogTemplate = await renderTemplate("systems/thewitchertrpg/templates/sheets/weapon-attack.hbs", data)
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: `${game.i18n.localize("WITCHER.Dialog.attackWith")}: ${item.name}`,
       content: dialogTemplate,
       buttons: {
@@ -850,20 +853,26 @@ export let itemMixin = {
               let config = new RollConfig()
               config.showResult = false
               let roll = await extendedRoll(attFormula, messageData, config)
+              const attackTotal = Number(roll.total);
+              messageData.flavor = messageData.flavor.replace(
+                `class="attack-message"`,
+                `class="attack-message" data-attack-total="${attackTotal}"`
+              );
 
               if (item.system.rollOnlyDmg) {
                 rollDamage(item, damage)
               } else {
                 let message = await roll.toMessage(messageData);
 
-                message.setFlag('TheWitcherTRPG', 'attack', item.getAttackSkillFlags())
-                message.setFlag('TheWitcherTRPG', 'damage', damage)
+                await message.setFlag('thewitchertrpg', 'attack', item.getAttackSkillFlags())
+                await message.setFlag('thewitchertrpg', 'attackTotal', attackTotal)
+                await message.setFlag('thewitchertrpg', 'damage', damage)
               }
             }
           }
         }
       }
-    }, myDialogOptions).render(true)
+    }, myDialogOptions))
   },
 
   _onSpellDisplay(event) {
@@ -922,4 +931,34 @@ export let itemMixin = {
     this._dragDrop.push(newDragDrop);
   }
 
+}
+
+function getSpellDamageType(spellItem) {
+  return spellItem.system.damageType || inferSpellDamageType(spellItem);
+}
+
+function getSpellIgnoresArmor(spellItem) {
+  return Boolean(spellItem.system.ignoreArmor) || spellEffectIgnoresArmor(spellItem.system.effect);
+}
+
+function inferSpellDamageType(spellItem) {
+  const source = String(spellItem.system?.source ?? "").toLowerCase();
+  const effect = String(spellItem.system?.effect ?? "").toLowerCase();
+
+  if (/slashing,\s*piercing,\s*or\s*bludgeoning/.test(effect)) return "";
+  if (/\bslash(?:ing)?\b|\bblade\b/.test(effect)) return "slashing";
+  if (/\bpierc(?:e|ing)\b|\bneedle\b|\bspike\b|\bshard\b/.test(effect)) return "piercing";
+  if (/\bbludgeon(?:ing)?\b|\bconcussive\b|\bslam\b|\bcrush\b/.test(effect)) return "bludgeoning";
+  if (
+    ["air", "earth", "fire", "water", "mixedelements"].includes(source)
+    || /\bfire\b|\bflame\b|\bburn(?:ing)?\b|\blightning\b|\belectric\b|\bice\b|\bfrost\b|\bfrozen\b|\bacid\b/.test(effect)
+  ) {
+    return "elemental";
+  }
+
+  return "";
+}
+
+function spellEffectIgnoresArmor(effect) {
+  return /\b(?:cannot|can't)\s+be\s+blocked\s+by\s+armor\b|\bignores?\s+armor\b|\bbypasses?\s+armor\b/i.test(String(effect ?? ""));
 }

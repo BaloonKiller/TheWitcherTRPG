@@ -5,7 +5,7 @@ import WitcherItemSheet from "./WitcherItemSheet.js";
 export default class WitcherWeaponSheet extends WitcherItemSheet {
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/weapon-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/weapon-sheet.hbs`;
   }
 
   /** @override */

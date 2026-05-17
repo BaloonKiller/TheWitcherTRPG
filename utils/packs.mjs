@@ -96,7 +96,7 @@ async function compilePacks(packName) {
         const src = path.join(PACK_SRC, folder.name);
         const dest = path.join(PACK_DEST, folder.name);
         console.log(`Compiling pack ${folder.name}`);
-        await compilenode ./utils/packs.mjs package unpackPack(src, dest, { recursive: true, log: true, transformEntry: cleanPackEntry });
+        await compilePack(src, dest, { recursive: true, log: true, transformEntry: cleanPackEntry });
     }
 }
 

@@ -26,8 +26,9 @@ export default class EnhancementData extends CommonItemData {
 
   /** @inheritdoc */
   static migrateData(source) {
-    super.migrateData(source);
+    const migrated = super.migrateData(source) ?? source;
 
-    this.effects?.forEach(effect => effect.percentage = parseInt(effect.percentage))
+    migrated.effects?.forEach(effect => effect.percentage = parseInt(effect.percentage))
+    return migrated;
   }
 }

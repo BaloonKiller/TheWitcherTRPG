@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="1 Unit of Feathers">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="68%">
+      <stop offset="0%" stop-color="#625545"/>
+      <stop offset="100%" stop-color="#201913"/>
+    </radialGradient>
+    <linearGradient id="feather" x1="48" y1="32" x2="188" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f4efe1"/>
+      <stop offset="55%" stop-color="#cfc3a9"/>
+      <stop offset="100%" stop-color="#8e7b61"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="22" fill="url(#bg)"/>
+  <path d="M58 210c35-35 60-69 75-101 12-25 32-51 68-60-3 29-17 70-45 102-24 27-55 45-98 59Z" fill="url(#feather)" stroke="#2b2118" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M58 210c42-45 76-89 143-161" fill="none" stroke="#5f4e3c" stroke-width="5" stroke-linecap="round"/>
+  <path d="M97 166c19-3 40-13 64-31M113 137c14-2 31-9 50-22M130 109c10-1 22-6 36-15" fill="none" stroke="#f8f1de" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+  <path d="M77 188c14-1 30-7 49-18" fill="none" stroke="#f8f1de" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+  <path d="M50 219c30-10 57-23 80-40" fill="none" stroke="#3a2b1f" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="44" cy="44" r="17" fill="#c79b55" stroke="#2b2118" stroke-width="5"/>
+  <text x="44" y="51" text-anchor="middle" font-family="serif" font-size="22" font-weight="700" fill="#21170f">1</text>
+</svg>

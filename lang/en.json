@@ -713,6 +713,7 @@
       "Cone": "Cone",
       "Ray": "Ray",
       "Damage": "Cause Damages",
+      "IgnoreArmor": "Ignore Armor",
       "createsShield": "Creates Shield",
       "doesHeal": "Applies Heal",
       "Short": {
@@ -847,6 +848,7 @@
       "improvedArmorPiercing": "(After Improved Armor Piercing)",
       "afterSPReduct": "Damage after sp reduction",
       "armorPiercing": "(Ignored due to Armor Piercing)",
+      "ignoreArmor": "(Armor ignored)",
       "afterLocationModifier": "Damage after location modifier",
       "afterResistances": "Damage after resistances/vulnerabilities",
       "totalApplied": "Total Damage Applied",

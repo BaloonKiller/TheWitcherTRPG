@@ -1,6 +1,7 @@
 import { rollSkillCheck } from "../../scripts/witcher.js";
 import { extendedRoll } from "../../scripts/chat.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import { DialogV1, renderV1Application } from "../../setup/foundry-compat.js";
 
 export let skillMixin = {
   /** Do not delete. This method is here to give external modules the possibility to make skill rolls. */
@@ -9,7 +10,7 @@ export let skillMixin = {
   },
 
   async _onProfessionRoll(event) {
-    let displayRollDetails = game.settings.get("TheWitcherTRPG", "displayRollsDetails")
+    let displayRollDetails = game.settings.get("thewitchertrpg", "displayRollsDetails")
     let stat = event.currentTarget.closest(".profession-display").dataset.stat;
     let level = event.currentTarget.closest(".profession-display").dataset.level || 0;
     let name = event.currentTarget.closest(".profession-display").dataset.name;
@@ -18,7 +19,7 @@ export let skillMixin = {
     let statName = `WITCHER.St${stat.charAt(0).toUpperCase() + stat.slice(1)}`;
 
     let rollFormula = !displayRollDetails ? `1d10+${statValue}+${level}` : `1d10+${statValue}[${game.i18n.localize(statName)}]+${level}[${name}]`;
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: `${game.i18n.localize("WITCHER.Dialog.profession.skill")}: ${name}`,
       content: `<label>${game.i18n.localize("WITCHER.Dialog.attackCustom")}: <input name="customModifiers" value=0></label>`,
       buttons: {
@@ -44,7 +45,7 @@ export let skillMixin = {
           }
         }
       }
-    }).render(true)
+    }))
   },
 
   calc_total_skills_profession(context) {

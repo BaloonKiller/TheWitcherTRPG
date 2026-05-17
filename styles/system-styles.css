@@ -28,6 +28,17 @@
   text-align: center;
 }
 
+.sheet nav.sheet-tabs a {
+  color: #f4efe2;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.sheet nav.sheet-tabs a:hover,
+.sheet nav.sheet-tabs a.active {
+  color: #ffffff;
+}
+
 /* Sheet min widths */
 .witcher.sheet.actor {
   min-width: 555px;

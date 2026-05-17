@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="42%" cy="28%" r="76%">
+      <stop offset="0%" stop-color="#5fb6c8"/>
+      <stop offset="58%" stop-color="#24647b"/>
+      <stop offset="100%" stop-color="#102733"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".36"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="42" fill="url(#bg)"/>
+  <path d="M42 78c70-38 142-52 214-42 82 12 154 48 214 104v294H42z" fill="#fff" opacity=".06"/>
+  <rect x="26" y="26" width="460" height="460" rx="34" fill="none" stroke="#f4ead4" stroke-width="8" opacity=".48"/>
+  <g filter="url(#shadow)"><path d="M256 64c66 84-24 116 50 196 26 28 40 62 32 100-10 52-50 88-98 88-58 0-104-46-104-104 0-54 38-92 78-126 34-30 56-76 42-154z" fill="#f4d071"/><path d="M260 250c38 54-20 72 12 118 14 20-2 48-28 48-28 0-48-22-48-50 0-38 48-62 64-116z" fill="#c44b32"/></g>
+  <rect x="58" y="398" width="396" height="66" rx="12" fill="#120f0c" opacity=".55"/>
+  <text x="256" y="439" text-anchor="middle" font-family="Georgia, serif" font-size="32" font-weight="700" fill="#fff0d2">Blemish</text>
+</svg>

@@ -1,14 +1,25 @@
 import { buttonDialog } from "../../scripts/chat.js";
 import { calc_currency_weight } from "../../scripts/witcher.js";
+import { ActorSheetV1, DialogV1, DragDrop, ItemDocument, mergeObject, renderDocumentSheet, renderV1Application, sanitizeSheetRenderOptions } from "../../setup/foundry-compat.js";
 
-export default class WitcherMonsterSheet extends ActorSheet {
+export default class WitcherMonsterSheet extends ActorSheetV1 {
+
+  render(force, options = {}) {
+    return super.render(force, sanitizeSheetRenderOptions(options));
+  }
+
+  async _render(force, options = {}) {
+    return super._render(force, sanitizeSheetRenderOptions(options));
+  }
 
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
       classes: ["witcher", "sheet", "actor"],
+      popOut: true,
+      resizable: true,
       width: 1120,
       height: 600,
-      template: "systems/TheWitcherTRPG/templates/sheets/actor/actor-sheet.hbs",
+      template: "systems/thewitchertrpg/templates/sheets/actor/actor-sheet.hbs",
       tabs: [{ navSelector: ".sheet-tabs", contentSelector: ".sheet-body", initial: "description" }],
     });
   }
@@ -28,8 +39,6 @@ export default class WitcherMonsterSheet extends ActorSheet {
     context.totalCost = context.items.cost();
 
     context.isGM = game.user.isGM
-
-    console.log(context)
 
     return context;
   }
@@ -97,7 +106,7 @@ export default class WitcherMonsterSheet extends ActorSheet {
       itemData.system = { type: "alchemical", level: "novice", isFormulae: true };
     }
 
-    await Item.create(itemData, { parent: this.actor })
+    await ItemDocument.create(itemData, { parent: this.actor })
   }
 
   async _addItem(actor, Additem, numberOfItem, forcecreate = false) {
@@ -146,7 +155,7 @@ export default class WitcherMonsterSheet extends ActorSheet {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    item.sheet.render(true)
+    renderDocumentSheet(item)
   }
 
   async _onItemShow(event) {
@@ -154,14 +163,14 @@ export default class WitcherMonsterSheet extends ActorSheet {
     let itemId = event.currentTarget.closest(".item").dataset.itemId;
     let item = this.actor.items.get(itemId);
 
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: item.name,
       content: `<img src="${item.img}" alt="${item.img}" width="100%" />`,
       buttons: {}
     }, {
       width: 520,
       resizable: true
-    }).render(true);
+    }));
   }
 
   async _onItemDelete(event) {

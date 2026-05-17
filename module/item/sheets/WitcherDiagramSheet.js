@@ -1,11 +1,12 @@
 
 import { genId } from "../../scripts/witcher.js";
+import { TextEditor, fromUuid } from "../../setup/foundry-compat.js";
 import WitcherItemSheet from "./WitcherItemSheet.js";
 
 export default class WitcherDiagramSheet extends WitcherItemSheet {
 
   get template() {
-    return `systems/TheWitcherTRPG/templates/sheets/diagrams-sheet.hbs`;
+    return `systems/thewitchertrpg/templates/sheets/diagrams-sheet.hbs`;
   }
 
   /** @override */

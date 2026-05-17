@@ -1,12 +1,12 @@
 {
-  "id": "TheWitcherTRPG",
+  "id": "thewitchertrpg",
   "title": "TheWitcherTRPG - fvtt",
   "description": "The Witcher TRPG System.",
   "compatibility": {
-    "minimum": "11",
-    "verified": "12"
+    "minimum": "12",
+    "verified": "14"
   },
-  "version": 1.028,
+  "version": "1.030",
   "authors": [
     {
       "name": "Stexinator",
@@ -55,10 +55,11 @@
           "name": "Character Generation",
           "sorting": "a",
           "packs": [
-            "Character-gen",
-            "Character-gen Sub-tables",
-            "Witcher Lifepath and BG Sub-tables",
-            "Life Event Sub-tables",
+            "character-generator",
+            "character-generator-sub-tables",
+            "witcher-lifepath",
+            "lifepath",
+            "style",
             "races",
             "professions"
           ]
@@ -77,33 +78,33 @@
   ],
   "packs": [
     {
-      "name": "Character-gen",
+      "name": "character-generator",
       "label": "Character Generator",
-      "path": "packs/character-generator.db",
+      "path": "packs/character-generator",
       "type": "RollTable"
     },
     {
-      "name": "Character-gen Sub-tables",
+      "name": "character-generator-sub-tables",
       "label": "Character Generator Sub-tables",
-      "path": "packs/character-generator-sub-tables.db",
+      "path": "packs/character-generator-sub-tables",
       "type": "RollTable"
     },
     {
-      "name": "Witcher Lifepath and BG Sub-tables",
+      "name": "witcher-lifepath",
       "label": "Witcher Lifepath and BG Sub-tables",
-      "path": "packs/witcher-lifepath.db",
+      "path": "packs/witcher-lifepath",
       "type": "RollTable"
     },
     {
-      "name": "Life Event Sub-tables",
+      "name": "lifepath",
       "label": "Life Event Sub-tables",
-      "path": "packs/lifepath.db",
+      "path": "packs/lifepath",
       "type": "RollTable"
     },
     {
-      "name": "Style and Values Sub-tables",
+      "name": "style",
       "label": "Style and Values Sub-tables",
-      "path": "packs/style.db",
+      "path": "packs/style",
       "type": "RollTable"
     },
     {
@@ -115,7 +116,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "professions",
@@ -126,7 +127,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "gear",
@@ -137,7 +138,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "crafting",
@@ -148,7 +149,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "magic",
@@ -159,7 +160,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "bestiary",
@@ -170,7 +171,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "combat",
@@ -181,7 +182,7 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "loot",
@@ -192,14 +193,14 @@
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "system": "TheWitcherTRPG"
+      "system": "thewitchertrpg"
     },
     {
       "name": "journal-entries",
       "label": "Journal Entries",
       "path": "packs/journal-entries",
       "type": "JournalEntry",
-      "system": "TheWitcherTRPG",
+      "system": "thewitchertrpg",
       "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
@@ -210,7 +211,7 @@
       "label": "Scenes",
       "path": "packs/scenes",
       "type": "Scene",
-      "system": "TheWitcherTRPG",
+      "system": "thewitchertrpg",
       "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
@@ -221,7 +222,7 @@
       "label": "Adventures",
       "path": "packs/adventures",
       "type": "Adventure",
-      "system": "TheWitcherTRPG",
+      "system": "thewitchertrpg",
       "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
@@ -279,7 +280,7 @@
   "gridUnits": "m",
   "primaryTokenAttribute": "resources.health",
   "secondaryTokenAttribute": "resources.power",
-  "url": "https://github.com/Stexinator/TheWitcherTRPG",
-  "manifest": "https://github.com/Stexinator/TheWitcherTRPG/releases/latest/download/system.json",
-  "download": "DOWNLOAD"
+  "url": "https://github.com/BaloonKiller/TheWitcherTRPG",
+  "manifest": "https://raw.githubusercontent.com/BaloonKiller/TheWitcherTRPG/dev/system.json",
+  "download": "https://github.com/BaloonKiller/TheWitcherTRPG/archive/refs/heads/dev.zip"
 }

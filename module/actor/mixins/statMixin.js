@@ -1,6 +1,7 @@
 import { updateDerived, genId } from "../../scripts/witcher.js";
 import { extendedRoll } from "../../scripts/chat.js";
 import { RollConfig } from "../../scripts/rollConfig.js";
+import { DialogV1, renderV1Application } from "../../setup/foundry-compat.js";
 
 export let statMixin = {
 
@@ -125,7 +126,7 @@ export let statMixin = {
       dialogTemplate += `<label>${game.i18n.localize("WITCHER.Apply.Mod")}</label>`;
       this.actor.system.reputation.modifiers.forEach(mod => dialogTemplate += `<div><input id="${mod.name.replace(/\s/g, '')}" type="checkbox" unchecked/> ${mod.name}(${mod.value})</div>`)
     }
-    new Dialog({
+    renderV1Application(new DialogV1({
       title: game.i18n.localize("WITCHER.ReputationTitle"),
       content: dialogTemplate,
       buttons: {
@@ -182,7 +183,7 @@ export let statMixin = {
           })
         }
       }
-    }).render(true);
+    }));
   },
 
   _onHPChanged(event) {
@@ -199,7 +200,7 @@ export let statMixin = {
 
 
   statListener(html) {
-    html.find("input.stat-max").on("change", updateDerived(this.actor));
+    html.find("input.stat-max").on("change", this._onHPChanged.bind(this));
 
     html.find(".hp-value").change(this._onHPChanged.bind(this));
 
