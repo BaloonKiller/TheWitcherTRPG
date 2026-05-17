@@ -279,7 +279,7 @@
   "gridUnits": "m",
   "primaryTokenAttribute": "resources.health",
   "secondaryTokenAttribute": "resources.power",
-  "url": "https://github.com/Stexinator/TheWitcherTRPG",
-  "manifest": "https://github.com/Stexinator/TheWitcherTRPG/releases/latest/download/system.json",
+  "url": "https://github.com/BaloonKiller/TheWitcherTRPG",
+  "manifest": "https://github.com/BaloonKiller/TheWitcherTRPG/releases/latest/download/system.json",
   "download": "DOWNLOAD"
 }
